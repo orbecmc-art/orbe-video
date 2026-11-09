@@ -1,4 +1,4 @@
-# Orbe Vídeo · Plugin (v1.6.0)
+# Orbe Vídeo · Plugin (v1.6.1)
 
 Duas skills que conversam + dez comandos:
 
@@ -126,12 +126,23 @@ GitHub); DaVinci **Studio 21.1** para controle nativo. O primeiro uso real em ca
 (importação testada por validação de formato, não dentro dos apps).
 
 ## Instalação
-- **Claude / Cowork:** aceite o arquivo `.plugin` (botão na conversa).
-- **Claude Code:** copie a pasta `orbe-video/` para o diretório de plugins, ou cada pasta de `skills/` para
-  `~/.claude/skills/` (mantenha `edita-video` e `motion-studio` lado a lado — a edição acha o motion pela pasta irmã,
-  ou defina `MOTION_STUDIO=<pasta>`).
-- Se você já tem a skill `motion-studio` avulsa instalada, desinstale-a: a deste plugin é a v5 com a ponte e a regra
-  de fontes.
+**Claude Code (terminal ou app), um comando — Mac, Windows ou Linux:**
+```
+claude plugin install orbe-video --marketplace orbecmc-art/orbe-video
+```
+Adiciona o marketplace `orbe` (este repositório) e instala o plugin de uma vez. Reinicie o Claude Code (ou rode
+`/reload-plugins`) e os comandos `/editar-video`, `/edit-cinema` etc. aparecem.
+
+**Atualizar** quando sair versão nova:
+```
+claude plugin marketplace update orbe
+claude plugin update orbe-video@orbe
+```
+
+**App Claude / Cowork (sem terminal):** baixe o `orbe-video.plugin` que o Claude manda na conversa e clique para
+aceitar — ou peça "empacota o orbe-video" numa conversa conectada a este repositório.
+
+Já tem a skill `motion-studio` avulsa instalada? Desinstale: a deste plugin é a v5 com a ponte e a regra de fontes.
 
 ## Requisitos (o `novo.sh` confere tudo e diz o que falta)
 ffmpeg com libass · Python 3.10+ com `numpy opencv-python-headless faster-whisper pillow scipy fonttools brotli` ·
@@ -160,6 +171,8 @@ Efeitos sonoros gravados (soam melhores que os sintetizados): uma pasta com WAVs
 propõe diffs; aprovado, sobe a versão e reempacota. Cadência sugerida: a cada 5 vídeos entregues ou mensal.
 
 ## Changelog
+- **1.6.1 (09/11/2026):** instalação em um comando — o repositório virou marketplace (`.claude-plugin/marketplace.json`,
+  marketplace `orbe`): `claude plugin install orbe-video --marketplace orbecmc-art/orbe-video`.
 - **1.6.0 (08/11/2026):** edits de carro e cinema — motor `montagem.py` (takes/fotos na batida, câmera em foto, rampa,
   transições com SFX, 6 cores de cinema, girado 16:9, cartela de máquina de escrever), `references/edit-cinema.md` com
   as 4 referências e 5 receitas, comando /edit-cinema e 3ª aba na galeria ("Edits de carro e cinema"): as 4

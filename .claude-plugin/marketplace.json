@@ -1,0 +1,33 @@
+{
+  "name": "orbe",
+  "owner": {
+    "name": "Orbe Assessoria Digital"
+  },
+  "metadata": {
+    "description": "Plugins da Orbe Assessoria Digital",
+    "version": "1.6.1"
+  },
+  "plugins": [
+    {
+      "name": "orbe-video",
+      "source": "./",
+      "description": "Vídeo da Orbe: edita-video (edição de vídeo gravado com perguntas fixas, galeria de estilos, cortes, legendas animadas, B-roll com licença, motion, SFX e QA medido; estilos de dinâmico a podcast P&B, lifestyle e entrevista, variações de teste, lista de planos, edit cinematográfico de carro/produto/evento na batida) + motion-studio (motion graphics em código, 23 estilos). Premiere, Final Cut, DaVinci, CapCut e celular.",
+      "version": "1.6.1",
+      "category": "productivity",
+      "keywords": [
+        "capcut",
+        "davinci",
+        "documentario",
+        "edicao",
+        "fcpxml",
+        "final-cut",
+        "galeria",
+        "legendas",
+        "minimal",
+        "motion",
+        "plano",
+        "podcast"
+      ]
+    }
+  ]
+}
