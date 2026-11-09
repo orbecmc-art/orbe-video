@@ -1,0 +1,193 @@
+<title>Galeria de Estilos Orbe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Sala de projeção: o mesmo vídeo passa em cada estilo; a ficha embaixo diz o que muda e qual é o pedido. */
+:root{
+  --bg:#F2EFE8; --surface:#FFFDF8; --ink:#19191A; --mute:#6E695F; --line:#DFD9CC; --screen:#0E0E10; --soft:#E9E4D8;
+  --accent:#3D61A3; --accent-ink:#FFFFFF; --ok:#2E7D4F; --tape:#F0CA35;
+  --f-head:"Instrument Serif",Georgia,serif; --f-ui:"Inter",ui-sans-serif,system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121212;--surface:#1B1B1A;--ink:#EEEAE1;--mute:#A29C90;--line:#302E2A;--screen:#050506;--soft:#24231F;--accent:#90AADB;--accent-ink:#0F1420;--ok:#6CC08F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121212;--surface:#1B1B1A;--ink:#EEEAE1;--mute:#A29C90;--line:#302E2A;--screen:#050506;--soft:#24231F;--accent:#90AADB;--accent-ink:#0F1420;--ok:#6CC08F;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-ui);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:30px}
+header{display:grid;gap:10px;max-width:72ch}
+.kicker{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+h1{font:400 clamp(38px,6vw,68px)/.98 var(--f-head);margin:0;letter-spacing:-.015em;text-wrap:balance}
+h1 em{color:var(--accent)}
+.lead{color:var(--mute);margin:0;font-size:16px}
+nav{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:600 14px var(--f-ui);border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+section{display:grid;gap:14px}
+section h2{font:400 clamp(26px,3vw,34px)/1.1 var(--f-head);margin:0}
+section .sub{color:var(--mute);margin:-6px 0 0;max-width:76ch}
+.fam{display:flex;flex-wrap:wrap;gap:6px}
+.fam button{font:500 12px var(--f-mono);border:1px solid var(--line);background:transparent;color:var(--mute);border-radius:999px;padding:4px 10px;cursor:pointer}
+.fam button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.grid{display:grid;gap:18px}
+.grid.ed{grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr))}
+.grid.mo{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.grid.ci{grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr))}
+.ci .tela{aspect-ratio:9/16}
+.refs{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr))}
+.rc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:5px;align-content:start;min-width:0}
+.rc .h{font:500 12px var(--f-mono);color:var(--mute);letter-spacing:.02em}
+.rc b{font:400 21px/1.15 var(--f-head)}
+.rc p{margin:0;font-size:13.5px}
+.rc .obs{color:var(--mute);font-size:12.5px}
+.rc .rec{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+.mat{font:500 11px var(--f-mono);color:var(--mute)}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;grid-template-rows:auto 1fr;min-width:0}
+.tile.bruto{background:var(--soft);border-style:dashed}
+.tile.sel{outline:2px solid var(--accent);outline-offset:2px}
+.tela{background:var(--screen);position:relative;overflow:hidden}
+.ed .tela{aspect-ratio:9/16}
+.mo .tela{aspect-ratio:16/9}
+.tela video{width:100%;height:100%;object-fit:contain;display:block;max-width:100%}
+.som{position:absolute;right:10px;bottom:10px;font:600 12px var(--f-ui);border:0;border-radius:999px;padding:6px 11px;background:rgba(0,0,0,.62);color:#fff;cursor:pointer;backdrop-filter:blur(4px)}
+.som[aria-pressed="true"]{background:var(--tape);color:#17140B}
+.selo{position:absolute;left:10px;top:10px;font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:3px 7px}
+.ficha{padding:12px 14px 14px;display:grid;gap:7px;align-content:start;min-width:0}
+.ficha h3{font:400 25px/1.1 var(--f-head);margin:0}
+.ficha p{margin:0;font-size:14px}
+.bom{font-size:13px;color:var(--mute)}
+.muda{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:2px 0 0;font-size:12.5px}
+.muda dt{color:var(--mute);font:500 11px/1.7 var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+.muda dd{margin:0;min-width:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px;font:500 11px var(--f-mono);color:var(--mute)}
+.meta span{border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.ref{font-size:13px;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.btn{font:600 13px var(--f-ui);border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;cursor:pointer}
+.btn.prim{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.ok{background:transparent;color:var(--ok);border-color:var(--ok)}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.btn:focus-visible,.tab:focus-visible,.fam button:focus-visible,.som:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cmd{font:500 12px var(--f-mono);color:var(--mute);word-break:break-word}
+.comp{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
+.comp .par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:560px}
+.comp .lado{display:grid;gap:6px;min-width:0}
+.comp .lado b{font:400 22px var(--f-head)}
+.comp video{width:100%;aspect-ratio:9/16;background:var(--screen);border-radius:10px;display:block;max-width:100%}
+.comp .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dica{color:var(--mute);font-size:13px}
+@media (max-width:560px){.grid.ci{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ci .ficha{padding:10px}.ci .ficha h3{font-size:20px}.ci .muda{grid-template-columns:minmax(0,1fr)}.ci .muda dt{line-height:1.3;margin-top:4px}.ci .btn{padding:6px 9px;font-size:12px}}
+@media (max-width:560px){.grid.ed{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ed .ficha{padding:10px}.ed .ficha h3{font-size:20px}.ed .muda{grid-template-columns:minmax(0,1fr)}.ed .muda dt{line-height:1.3;margin-top:4px}.ed .btn{padding:6px 9px;font-size:12px}}
+footer{color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:grid;gap:4px;max-width:90ch}
+@media (prefers-reduced-motion:reduce){.tela video{display:none}}
+</style>
+<div class="wrap">
+  <header>
+    <span class="kicker">Orbe · edita-video + motion-studio</span>
+    <h1>Galeria de <em>estilos</em></h1>
+    <p class="lead">Cada quadro é um vídeo real feito pelo Claude. Na edição, é o <b>mesmo vídeo bruto</b> em cada estilo; em cinema, o material de um cliente montado na batida. Aperte <b>Ouvir</b> para sentir o som, <b>Comparar</b> para ver dois lado a lado e <b>Usar este estilo</b> para copiar o pedido e colar na conversa.</p>
+    <nav aria-label="Seções"><button class="tab" data-s="ed" aria-pressed="true">Edição de vídeo gravado</button><button class="tab" data-s="mo" aria-pressed="false">Motion graphics do zero</button><button class="tab" data-s="ci" aria-pressed="false">Edits de carro e cinema</button></nav>
+  </header>
+  <section id="s-ed">
+    <h2>Edição de vídeo gravado</h2>
+    <p class="sub">Um talking head real de 22 s, cortado uma vez e editado em cada estilo. Compare legenda, câmera, cor, cenas e som; a marca do cliente entra por cima de qualquer um.</p>
+    <div class="comp" id="comp" hidden>
+      <div class="bar"><b style="font:400 24px var(--f-head)">Comparar lado a lado</b><span class="dica" id="comp-dica">Escolha dois estilos com o botão "Comparar".</span></div>
+      <div class="par"><div class="lado"><b id="ca-n"></b><video id="ca" playsinline preload="metadata"></video></div><div class="lado"><b id="cb-n"></b><video id="cb" playsinline preload="metadata" muted></video></div></div>
+      <div class="bar"><button class="btn prim" id="comp-play" type="button">Tocar juntos</button><button class="btn" id="comp-som" type="button">Som do lado direito</button><button class="btn" id="comp-fechar" type="button">Fechar</button></div>
+    </div>
+    <div class="grid ed" id="g-ed"></div>
+  </section>
+  <section id="s-mo" hidden>
+    <h2>Motion graphics do zero</h2>
+    <p class="sub">Aberturas, vinhetas, explicações, anúncios. O estilo traz o mecanismo, o ritmo medido e a paleta; o assunto, os textos e a marca são do cliente.</p>
+    <div class="fam" id="fam" role="group" aria-label="Famílias"></div>
+    <div class="grid mo" id="g-mo"></div>
+  </section>
+  <section id="s-ci" hidden>
+    <h2>Edits de carro e cinema</h2>
+    <p class="sub">Sem ninguém falando: takes de vídeo montados na batida, com câmera lenta, cor de cinema e a marca no fim. Escolha a referência e aperte <b>Usar este estilo</b>: o /edit-cinema monta o vídeo do cliente nessa receita, com os takes dele.</p>
+    <div class="refs" id="r-ci" aria-label="Referências estudadas"></div>
+    <div class="grid ci" id="g-ci"></div>
+  </section>
+  <footer>
+    <span>Edição: o vídeo bruto é da Orbe; os estilos são presets do plugin orbe-video. "Dossiê" segue a gramática do @odossie.br e "Minimal premium" o look estudado no vídeo do Joseph (links nas fichas) — só a gramática, nunca o conteúdo.</span>
+    <span>Motion: "Dossiê de dados" e "Série com personagem" são da Orbe; os demais vêm da biblioteca <b>claude-video</b> de Felipe Borges (licença MIT).</span>
+    <span>Cinema: takes da Rivoli Concept, cliente da Orbe; trilhas geradas pelo plugin. As quatro referências do Instagram ensinaram a gramática (ritmo, cor, som); nenhum quadro delas está aqui.</span>
+  </footer>
+</div>
+<script>
+const D = {"projeto": "base", "edicao": [{"id": "bruto", "nome": "Bruto (sem edição)", "chamada": "O vídeo como chegou: é daqui que todos os estilos partem.", "bom": "", "video": "videos/e-bruto.mp4", "capa": "videos/e-bruto.jpg", "muda": {}, "bruto": true, "ref": null}, {"id": "minimal", "nome": "Minimal premium", "chamada": "Papel, serifa itálica e uma cor fosca: aspas, linha e gráfico alternando com o rosto", "bom": "Médico, advogado, mentor, educativo de alto valor", "video": "videos/e-minimal.mp4", "capa": "videos/e-minimal.jpg", "muda": {"Legenda": "cinematográfica (chave grande em serifa)", "Câmera": "zoom 100↔105%, punch +3.5%", "Cor": "fosco", "Cenas": "4–7 por minuto · look papel", "Som": "discreto · trilha piano -20 dB"}, "cmd": "/editar-video estilo=minimal", "pecas": ["aspas", "callout", "grafico", "linha"], "ref": {"rotulo": "Referência: o \"look Arthur Brooks\" (vídeo do Joseph)", "url": "https://www.youtube.com/watch?v=g9xoKm5DEeU"}}, {"id": "dossie", "nome": "Dossiê", "chamada": "Tarjas pretas e etiquetas amarelas de papel rasgado, faixa vermelha, a conta em quadradinhos e colagem com fita", "bom": "Dados, mercado, resultado de cliente, opinião, \"fizemos a conta\"", "video": "videos/e-dossie.mp4", "capa": "videos/e-dossie.jpg", "muda": {"Legenda": "serifa itálica discreta; o soco vai nas etiquetas", "Câmera": "zoom 100↔107%, punch +5.0%", "Cor": "documental", "Cenas": "5–9 por minuto · look dossie", "Som": "moderado · trilha piano -21 dB"}, "cmd": "/editar-video estilo=dossie", "pecas": ["aspas", "colagem", "etiqueta", "faixa", "grade", "numero"], "ref": {"rotulo": "Referência: @odossie.br (TikTok)", "url": "https://vt.tiktok.com/ZSpM7xHKF/"}}, {"id": "podcast-pb", "nome": "Podcast P&B", "chamada": "Preto e branco com grão, legenda que se monta palavra a palavra, palavras gigantes atrás da cabeça e quebra com reverb", "bom": "Podcast, entrevista, opinião forte, bastidor", "video": "videos/e-podcast-pb.mp4", "capa": "videos/e-podcast-pb.jpg", "muda": {"Legenda": "se monta palavra a palavra; chave em serifa itálica", "Câmera": "zoom 100↔112%, punch +5.0%", "Cor": "pb", "Cenas": "1–3 por minuto", "Som": "discreto · trilha cinematic -22 dB"}, "cmd": "/editar-video estilo=podcast-pb", "pecas": ["efeito", "palavra"], "ref": {"rotulo": "Referência: podcast cinematográfico P&B (vídeo do Rourke)", "url": "https://www.youtube.com/watch?v=M59zhPRXg1I"}}, {"id": "lifestyle", "nome": "Lifestyle editorial", "chamada": "Gancho gigante que se empilha, legenda de uma palavra em serifa, rótulos creme em sans + manuscrita no espaço livre e card de documento", "bom": "Educadoras, mentoras, estética, nutrição, bem-estar", "video": "videos/e-lifestyle.mp4", "capa": "videos/e-lifestyle.jpg", "muda": {"Legenda": "1 palavras, frase, fade", "Câmera": "zoom 100↔108%, sem punch", "Cor": "quente", "Cenas": "5–10 por minuto · look bold", "Som": "nenhum · trilha piano -30 dB"}, "cmd": "/editar-video estilo=lifestyle", "pecas": ["doc", "empilha", "rotulo"], "ref": {"rotulo": "Referência: @daniirramoss (Instagram)", "url": "https://www.instagram.com/reel/DeKQIjRxusy/"}}, {"id": "entrevista", "nome": "Entrevista cinematográfica", "chamada": "Luz de cinema, legenda pequena em escada, cartelas de respiro com a fala escrita e fim em fade para o preto", "bom": "Autoridade, opinião, negócios, advogados, consultores", "video": "videos/e-entrevista.mp4", "capa": "videos/e-entrevista.jpg", "muda": {"Legenda": "3 palavras, frase, fade", "Câmera": "zoom 100↔118%, punch +14.0%", "Cor": "cinema", "Cenas": "2–6 por minuto · look bold", "Som": "discreto · trilha cinematic -24 dB"}, "cmd": "/editar-video estilo=entrevista", "pecas": ["cartela"], "ref": {"rotulo": "Referência: @nicomonteiroo (Instagram)", "url": "https://www.instagram.com/reel/DfDOL7Vgp4V/"}}, {"id": "dinamico", "nome": "Dinâmico", "chamada": "Caixa alta palavra a palavra, zoom alternado e punch-in, peça a cada poucos segundos", "bom": "Retenção, opinião, dica rápida", "video": "videos/e-dinamico.mp4", "capa": "videos/e-dinamico.jpg", "muda": {"Legenda": "2 palavras, CAIXA ALTA, pop", "Câmera": "zoom 100↔113%, punch +8.0%", "Cor": "punch", "Cenas": "4–7 por minuto", "Som": "intenso · trilha tech -19 dB"}, "cmd": "/editar-video estilo=dinamico", "pecas": ["check", "cta", "numero", "palavra", "titulo"], "ref": null}, {"id": "clinica-premium", "nome": "Clínica premium", "chamada": "Sóbrio e confiável: placas claras, zoom discreto, som de cuidado", "bom": "Clínicas, médicos, saúde (CFM)", "video": "videos/e-clinica-premium.mp4", "capa": "videos/e-clinica-premium.jpg", "muda": {"Legenda": "4 palavras, frase, fade", "Câmera": "zoom 100↔108%, punch +4.5%", "Cor": "natural", "Cenas": "2–3 por minuto", "Som": "discreto · trilha warm -23 dB"}, "cmd": "/editar-video estilo=clinica-premium", "pecas": ["cta", "numero", "titulo"], "ref": null}, {"id": "educativo", "nome": "Educativo", "chamada": "Cards, números e listas que explicam enquanto a pessoa fala", "bom": "Aula curta, passo a passo, tutorial", "video": "videos/e-educativo.mp4", "capa": "videos/e-educativo.jpg", "muda": {"Legenda": "3 palavras, CAIXA ALTA, pop", "Câmera": "zoom 100↔110%, punch +6.0%", "Cor": "natural", "Cenas": "4–6 por minuto", "Som": "moderado · trilha minimal -22 dB"}, "cmd": "/editar-video estilo=educativo", "pecas": ["lista", "numero", "titulo"], "ref": null}, {"id": "luxo", "nome": "Luxo", "chamada": "Lento e elegante, legenda mínima, placas claras e poucas peças, impacto só nas revelações", "bom": "Concessionária premium, joalheria, imóveis", "video": "videos/e-luxo.mp4", "capa": "videos/e-luxo.jpg", "muda": {"Legenda": "4 palavras, frase, fade", "Câmera": "zoom 100↔106%, sem punch", "Cor": "cinema", "Cenas": "1–3 por minuto", "Som": "discreto · trilha cinematic -17 dB"}, "cmd": "/editar-video estilo=luxo", "pecas": ["cta", "titulo"], "ref": null}, {"id": "varejo", "nome": "Varejo e oferta", "chamada": "Energia de oferta: números grandes, cor quente, chamada forte no fim", "bom": "Loja, promoção, lançamento", "video": "videos/e-varejo.mp4", "capa": "videos/e-varejo.jpg", "muda": {"Legenda": "2 palavras, CAIXA ALTA, pop", "Câmera": "zoom 100↔113%, punch +7.0%", "Cor": "produto", "Cenas": "4–7 por minuto", "Som": "intenso · trilha warm -18 dB"}, "cmd": "/editar-video estilo=varejo", "pecas": ["check", "cta", "numero", "palavra"], "ref": null}], "motion": [{"id": "documentario-continuo", "nome": "Documentário contínuo", "familia": "Pôster e papel", "chamada": "Um plano-sequência sobre um mapa real: papéis caem na mesa, ano gigante, rota, círculo e carimbo na palavra — a voz guia o tempo", "duracao": 35, "formato": "9:16", "media": true, "som": true, "credito": "Orbe · motion-studio", "video": "videos/m-documentario-continuo.mp4", "cmd": "/novo-motion no estilo documentario-continuo", "ref": {"rotulo": "Referência: documentário contínuo (vídeo do Zane Hoyer)", "url": "https://www.youtube.com/watch?v=e2Fykz51Nxg"}}, {"id": "serie-personagem", "nome": "Série com personagem", "familia": "Personagem e série", "som": true, "chamada": "Um personagem que fala com voz, boca sincronizada e legenda palavra a palavra; um episódio por arquivo", "duracao": 13, "formato": "9:16", "video": "videos/m-serie-personagem.mp4", "cmd": "/novo-motion série com personagem", "credito": "Orbe · motion-studio"}, {"id": "dossie-de-dados", "nome": "Dossiê de dados (\"A conta\")", "familia": "Pôster e papel", "chamada": "Uma conta feita em voz alta e provada na mesa: tabela real, quadradinhos amarelos, fotos com fita, persiana que vira noite", "duracao": 85, "formato": "9:16", "media": true, "som": true, "credito": "Orbe · motion-studio", "video": "videos/m-dossie-de-dados.mp4", "cmd": "/novo-motion no estilo dossie-de-dados", "ref": null}, {"id": "editor-ia", "nome": "Editor com cursor de IA", "familia": "Apps com cursor de IA", "chamada": "Uma IA edita o vídeo dentro do editor e o vídeo toma a tela", "duracao": 18, "formato": "16:9", "media": false, "video": "videos/m-editor-ia.mp4", "cmd": "/novo-motion no estilo editor-ia", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "app-de-design", "nome": "App de design com cursor de IA", "familia": "Apps com cursor de IA", "chamada": "O cursor monta uma thumbnail num app de design", "duracao": 15, "formato": "16:9", "media": false, "video": "videos/m-app-de-design.mp4", "cmd": "/novo-motion no estilo app-de-design", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "app-de-motion", "nome": "App de motion com cursor de IA", "familia": "Apps com cursor de IA", "chamada": "Curvas e keyframes mexidos por uma IA", "duracao": 16, "formato": "16:9", "media": false, "video": "videos/m-app-de-motion.mp4", "cmd": "/novo-motion no estilo app-de-motion", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "aviao-em-codigo", "nome": "Avião em código", "familia": "Cenas e paisagens", "chamada": "Um avião 3D feito só com código vira ilustração e decola", "duracao": 22, "formato": "16:9", "media": false, "video": "videos/m-aviao-em-codigo.mp4", "cmd": "/novo-motion no estilo aviao-em-codigo", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "festival-da-lua", "nome": "Festival da lua", "familia": "Cenas e paisagens", "chamada": "Nanquim e pincel seco; o desenho vira foto e anoitece", "duracao": 28, "formato": "16:9", "media": false, "video": "videos/m-festival-da-lua.mp4", "cmd": "/novo-motion no estilo festival-da-lua", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "porto-de-nova-york", "nome": "Porto de Nova York", "familia": "Cenas e paisagens", "chamada": "Pôr do sol, barco e as luzes acendendo de baixo pra cima", "duracao": 30, "formato": "16:9", "media": false, "video": "videos/m-porto-de-nova-york.mp4", "cmd": "/novo-motion no estilo porto-de-nova-york", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "barco-e-montanha", "nome": "Barco e montanha", "familia": "Cenas e paisagens", "chamada": "Camadas de papel, barco e montanha, versão premium", "duracao": 16, "formato": "16:9", "media": false, "video": "videos/m-barco-e-montanha.mp4", "cmd": "/novo-motion no estilo barco-e-montanha", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "dirigivel-a-lapis", "nome": "Dirigível a lápis", "familia": "Lápis, giz e caneta", "chamada": "Mascote em expedição a lápis que vira pintura de pôr do sol", "duracao": 28.6, "formato": "1:1", "media": false, "video": "videos/m-dirigivel-a-lapis.mp4", "cmd": "/novo-motion no estilo dirigivel-a-lapis", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "giz-de-cera", "nome": "Giz de cera", "familia": "Lápis, giz e caneta", "chamada": "Giz e canetinha no papel-cartão", "duracao": 5, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-giz-de-cera.mp4", "cmd": "/novo-motion no estilo giz-de-cera", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "rabisco-de-caneta", "nome": "Rabisco de caneta", "familia": "Lápis, giz e caneta", "chamada": "Rabiscos de esferográfica na margem do caderno", "duracao": 5, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-rabisco-de-caneta.mp4", "cmd": "/novo-motion no estilo rabisco-de-caneta", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "sessao-na-mesa", "nome": "Sessão na mesa", "familia": "Lápis, giz e caneta", "chamada": "O dia com o agente, em papel e aquarela", "duracao": 58.7, "formato": "16:9", "media": false, "video": "videos/m-sessao-na-mesa.mp4", "cmd": "/novo-motion no estilo sessao-na-mesa", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "showreel", "nome": "Showreel em fundo claro", "familia": "Tipografia e filme", "chamada": "Pôster suíço que dança no compasso, sete capítulos", "duracao": 16, "formato": "16:9", "media": false, "video": "videos/m-showreel.mp4", "cmd": "/novo-motion no estilo showreel", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "documento-vira-video", "nome": "Documento vira vídeo", "familia": "Tipografia e filme", "chamada": "O ponto final é um portal; a volta é vídeo", "duracao": 32, "formato": "16:9", "media": false, "video": "videos/m-documento-vira-video.mp4", "cmd": "/novo-motion no estilo documento-vira-video", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "poster-suico", "nome": "Pôster suíço em grade", "familia": "Pôster e papel", "chamada": "Pôster branco e preto; a palavra troca como esteira e o ponto vermelho salta", "duracao": 9, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-poster-suico.mp4", "cmd": "/novo-motion no estilo poster-suico", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "grafico-de-jornal", "nome": "Gráfico de jornal", "familia": "Pôster e papel", "chamada": "Papel salmão; uma barra fica azul, dispara e sobe pro 1º lugar", "duracao": 10, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-grafico-de-jornal.mp4", "cmd": "/novo-motion no estilo grafico-de-jornal", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "diagrama-azul-marinho", "nome": "Diagrama azul-marinho", "familia": "Interface e diagrama", "chamada": "Fluxo de 5 nós que se constrói com um pulso azul percorrendo os fios", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-diagrama-azul-marinho.mp4", "cmd": "/novo-motion no estilo diagrama-azul-marinho", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "folha-de-projeto", "nome": "Folha de projeto", "familia": "Interface e diagrama", "chamada": "Desenho técnico que se traça, explode em peças e pinta a que importa de amarelo", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-folha-de-projeto.mp4", "cmd": "/novo-motion no estilo folha-de-projeto", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "interface-escura-3d", "nome": "Interface escura em 3D", "familia": "Interface e diagrama", "chamada": "App escuro visto por uma câmera 3D lenta; cursor verde risca a fila da semana", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-interface-escura-3d.mp4", "cmd": "/novo-motion no estilo interface-escura-3d", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "livro-pop-up", "nome": "Livro pop-up de papel", "familia": "Pôster e papel", "chamada": "Folhas de papel recortado pousam uma a uma; a pilha respira e se desmonta", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-livro-pop-up.mp4", "cmd": "/novo-motion no estilo livro-pop-up", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "cartaz-risografia", "nome": "Cartazes em risografia", "familia": "Pôster e papel", "chamada": "Duas tintas fora de registro carimbando no compasso de 120 BPM", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-cartaz-risografia.mp4", "cmd": "/novo-motion no estilo cartaz-risografia", "credito": "claude-video · Felipe Borges", "ref": null}, {"id": "cartaz-gritado", "nome": "Cartaz gritado", "familia": "Pôster e papel", "chamada": "Amarelo e preto; uma palavra gigante por batida, cortes secos, contagem 3 2 1", "duracao": 12, "formato": "16:9", "media": false, "loop": true, "video": "videos/m-cartaz-gritado.mp4", "cmd": "/novo-motion no estilo cartaz-gritado", "credito": "claude-video · Felipe Borges", "ref": null}], "cinema": [{"id": "aftermovie", "nome": "Aftermovie de evento", "material": "11 takes de celular · Exotic Experience", "chamada": "Takes do evento na batida: palco com título, público, os carros na queda com câmera lenta, fecha no palco e na marca.", "bom": "evento, inauguração, encontro de clientes, feira", "muda": {"Ritmo": "2 → 1 batida no build, 2 na queda (124 bpm)", "Câmera": "rampa de velocidade nos takes de 60 qps", "Cor": "outono: quente", "Som": "trilha eletrônica + público baixo + efeitos nas transições"}, "ref": null, "video": "videos/c-aftermovie.mp4", "capa": "videos/c-aftermovie.jpg", "cmd": "/edit-cinema receita aftermovie"}], "cinema_refs": [{"handle": "@h.vzls", "titulo": "911 Turbo S no outono", "url": "https://www.instagram.com/p/DeMmOMFuJIK/", "receita": "cinema-lento", "ensina": "Planos longos cortando nos tempos fortes, câmera lenta e contínua, cor de outono."}, {"handle": "@shotbykinetic", "titulo": "BMW M3 E92", "url": "https://www.instagram.com/p/DdGgrfNJiZ7/", "receita": "vire-o-celular", "ensina": "16:9 girado dentro do 9:16, grão de filme, legenda de máquina de escrever, cartela preta antes da batida."}, {"handle": "@loris.cataldo", "titulo": "Restomod nos Alpes", "url": "https://www.instagram.com/p/Deo2Fc0KJbr/", "receita": "ritual", "ensina": "O ritual antes de sair em cortes que aceleram (0,8 → 0,5 s); a estrada entra quando a batida cai."}, {"handle": "@f1rstmotors", "titulo": "ASMR Ferrari 288 GTO", "url": "https://www.instagram.com/p/DfHwbPRMMqD/", "receita": "asmr", "ensina": "Sem trilha: só o som real (porta, chave, ronco) com o corte no som; volta de detalhes; marca da loja no fim.", "obs": "Pede áudio limpo do carro, gravado perto (porta, chave, ronco)."}]};
+const $ = (s) => document.querySelector(s);
+const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { const v = e.target; if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; if (!v.dataset.ouvindo) v.play().catch(() => {}); } else if (!v.dataset.ouvindo) v.pause(); }), { rootMargin: '200px' }) : null;
+let ouvindo = null;
+function silencia() { if (!ouvindo) return; ouvindo.v.muted = true; delete ouvindo.v.dataset.ouvindo; ouvindo.b.setAttribute('aria-pressed', 'false'); ouvindo.b.textContent = 'Ouvir'; ouvindo = null; }
+function ouvir(v, b) {
+  if (ouvindo && ouvindo.v === v) { silencia(); return; }
+  silencia(); $('#ca').pause(); $('#cb').pause();
+  if (!v.src) v.src = v.dataset.src; v.muted = false; v.dataset.ouvindo = '1'; v.currentTime = 0; v.play().catch(() => {});
+  b.setAttribute('aria-pressed', 'true'); b.textContent = 'Ouvindo'; ouvindo = { v, b };
+}
+function copiar(txt, b) {
+  const ok = () => { b.textContent = 'Copiado: cole na conversa'; b.classList.add('ok'); setTimeout(() => { b.textContent = 'Usar este estilo'; b.classList.remove('ok'); }, 2600); };
+  const fb = () => { const t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (e) { b.textContent = txt; } t.remove(); };
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok).catch(fb); else fb();
+}
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+let escolhidos = [];
+function comparar(x, tile, b) {
+  const i = escolhidos.findIndex((y) => y.x.id === x.id);
+  if (i >= 0) { escolhidos.splice(i, 1); tile.classList.remove('sel'); b.setAttribute('aria-pressed', 'false'); }
+  else { if (escolhidos.length === 2) { const o = escolhidos.shift(); o.tile.classList.remove('sel'); o.b.setAttribute('aria-pressed', 'false'); } escolhidos.push({ x, tile, b }); tile.classList.add('sel'); b.setAttribute('aria-pressed', 'true'); }
+  const c = $('#comp'); c.hidden = escolhidos.length === 0;
+  const [a, z] = escolhidos;
+  $('#ca-n').textContent = a ? a.x.nome : ''; $('#cb-n').textContent = z ? z.x.nome : '';
+  if (a) $('#ca').src = a.x.video; if (z) $('#cb').src = z.x.video;
+  $('#comp-dica').textContent = escolhidos.length < 2 ? 'Escolha mais um estilo para comparar.' : 'Os dois tocam do começo, no mesmo tempo.';
+  if (escolhidos.length === 2) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+let somDir = false;
+$('#comp-play').addEventListener('click', () => { silencia(); const a = $('#ca'), z = $('#cb'); a.currentTime = 0; z.currentTime = 0; a.muted = somDir; z.muted = !somDir; a.play().catch(() => {}); z.play().catch(() => {}); });
+$('#comp-som').addEventListener('click', (e) => { somDir = !somDir; $('#ca').muted = somDir; $('#cb').muted = !somDir; e.target.textContent = somDir ? 'Som do lado esquerdo' : 'Som do lado direito'; });
+$('#comp-fechar').addEventListener('click', () => { escolhidos.forEach((o) => { o.tile.classList.remove('sel'); o.b.setAttribute('aria-pressed', 'false'); }); escolhidos = []; $('#ca').pause(); $('#cb').pause(); $('#comp').hidden = true; });
+setInterval(() => { const a = $('#ca'), z = $('#cb'); if (!a.paused && !z.paused && Math.abs(a.currentTime - z.currentTime) > 0.15) z.currentTime = a.currentTime; }, 1000);
+function tile(x, tipo) {
+  const t = el('article', 'tile' + (x.bruto ? ' bruto' : '')); t.dataset.fam = x.familia || '';
+  const tela = el('div', 'tela');
+  const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'none'; v.dataset.src = x.video;
+  if (x.capa) v.poster = x.capa; v.setAttribute('aria-label', 'Exemplo: ' + x.nome);
+  if (io) io.observe(v); else { v.src = x.video; v.autoplay = true; }
+  if (tipo === 'mo' && x.formato === '9:16') { tela.style.aspectRatio = '4/5'; v.style.objectFit = 'cover'; }
+  tela.appendChild(v);
+  if (x.bruto) tela.appendChild(el('span', 'selo', 'bruto'));
+  if (tipo === 'ed' || tipo === 'ci' || x.som) { const s = el('button', 'som', 'Ouvir'); s.type = 'button'; s.setAttribute('aria-pressed', 'false'); s.addEventListener('click', () => ouvir(v, s)); tela.appendChild(s); }
+  const f = el('div', 'ficha'); f.append(el('h3', null, x.nome), el('p', null, x.chamada));
+  if (x.material) f.appendChild(el('div', 'mat', x.material));
+  if (x.bom) f.appendChild(el('div', 'bom', 'Bom para: ' + x.bom));
+  if (x.muda && Object.keys(x.muda).length) { const dl = el('dl', 'muda'); for (const [k, val] of Object.entries(x.muda)) dl.append(el('dt', null, k), el('dd', null, val)); f.appendChild(dl); }
+  if (tipo === 'mo') { const m = el('div', 'meta'); [x.familia, x.formato, x.duracao ? x.duracao + ' s' : '', x.credito].filter(Boolean).forEach((s) => m.appendChild(el('span', null, s))); f.appendChild(m); }
+  if (x.ref) { const a = el('a', 'ref', x.ref.rotulo); a.href = x.ref.url; a.target = '_blank'; a.rel = 'noopener'; f.appendChild(a); }
+  if (!x.bruto) {
+    const ac = el('div', 'acoes');
+    if (tipo === 'ed') { const c = el('button', 'btn', 'Comparar'); c.type = 'button'; c.setAttribute('aria-pressed', 'false'); c.addEventListener('click', () => comparar(x, t, c)); ac.appendChild(c); }
+    const u = el('button', 'btn prim', 'Usar este estilo'); u.type = 'button'; u.addEventListener('click', () => copiar(x.cmd, u)); ac.appendChild(u);
+    f.append(ac, el('div', 'cmd', x.cmd));
+  } else { const ac = el('div', 'acoes'); const c = el('button', 'btn', 'Comparar'); c.type = 'button'; c.setAttribute('aria-pressed', 'false'); c.addEventListener('click', () => comparar(x, t, c)); ac.appendChild(c); f.appendChild(ac); }
+  t.append(tela, f); return t;
+}
+D.edicao.forEach((x) => $('#g-ed').appendChild(tile(x, 'ed')));
+D.motion.forEach((x) => $('#g-mo').appendChild(tile(x, 'mo')));
+(D.cinema || []).forEach((x) => $('#g-ci').appendChild(tile(x, 'ci')));
+(D.cinema_refs || []).forEach((r) => { const c = el('article', 'rc'); c.append(el('span', 'h', r.handle), el('b', null, r.titulo), el('span', 'rec', 'receita: ' + r.receita), el('p', null, r.ensina));
+  if (r.obs) c.appendChild(el('p', 'obs', r.obs)); const a = el('a', 'ref', 'Ver no Instagram'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; c.appendChild(a);
+  const cmd = '/edit-cinema receita ' + r.receita; const ac = el('div', 'acoes'); const u = el('button', 'btn prim', 'Usar este estilo'); u.type = 'button'; u.addEventListener('click', () => copiar(cmd, u)); ac.appendChild(u); c.append(ac, el('div', 'cmd', cmd)); $('#r-ci').appendChild(c); });
+const fams = ['Todas', ...new Set(D.motion.map((x) => x.familia))];
+fams.forEach((f, i) => { const b = el('button', null, f); b.type = 'button'; b.setAttribute('aria-pressed', String(i === 0));
+  b.addEventListener('click', () => { $('#fam').querySelectorAll('button').forEach((y) => y.setAttribute('aria-pressed', String(y === b))); $('#g-mo').querySelectorAll('.tile').forEach((t) => { t.hidden = !(f === 'Todas' || t.dataset.fam === f); }); });
+  $('#fam').appendChild(b); });
+const HASH = { ed: '#edicao', mo: '#motion', ci: '#cinema' };
+function aba(s) { document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.s === s))); ['ed', 'mo', 'ci'].forEach((k) => { $('#s-' + k).hidden = s !== k; }); silencia(); const h = HASH[s]; if (location.hash !== h) history.replaceState(null, '', h); }
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => aba(t.dataset.s)));
+const ini = () => aba(location.hash === '#motion' ? 'mo' : location.hash === '#cinema' ? 'ci' : 'ed');
+window.addEventListener('hashchange', ini); ini();
+</script>

@@ -1,0 +1,51 @@
+{
+  "project": "exemplo-lancamento",
+  "template": "ui-morph@3",
+  "duration": 12,
+  "fps": 60,
+  "bpm": 120,
+
+  "brand": {
+    "name": "studio",
+    "url": "seu-site.com.br",
+    "colors": { "bg": "#F1EEE7", "paper": "#FFFFFF", "ink": "#141413", "mute": "#8A867D", "soft": "#E7E2D8", "accent": "#FF5A1F" },
+    "fonts": { "display": "Inter Display", "ui": "Inter" },
+    "logo": null
+  },
+
+  "copy": {
+    "button": "Começar",
+    "metricLabel": "Leads este mês",
+    "tabs": ["Visão", "Receita", "Leads"],
+    "toast": "Publicado"
+  },
+
+  "claims": [
+    { "id": "leads", "value": 1284, "unit": "", "text": "1.284 leads no mês", "approved": true, "source": "EXEMPLO — troque por dado aprovado pelo cliente" },
+    { "id": "retencao", "value": 38, "unit": "%", "text": "+38% de retenção", "approved": true, "source": "EXEMPLO — troque por dado aprovado pelo cliente" }
+  ],
+
+  "scenes": [
+    { "id": "hook",    "start": 0,    "end": 2.5,  "type": "kinetic-title" },
+    { "id": "product", "start": 2.5,  "end": 7.9,  "type": "interface-morph" },
+    { "id": "proof",   "start": 7.9,  "end": 10,   "type": "claim-number" },
+    { "id": "cta",     "start": 10,   "end": 12,   "type": "logo-cta" }
+  ],
+
+  "hooks": [
+    { "id": "produto",   "lines": ["Motion", "em código."] },
+    { "id": "problema",  "lines": ["Leads", "esfriando?"] },
+    { "id": "resultado", "lines": ["+38%", "de retenção"], "claim": "retencao", "style": "number" }
+  ],
+
+  "ctas": [
+    { "id": "teste", "text": "Teste grátis" },
+    { "id": "demo",  "text": "Agende uma demo" }
+  ],
+
+  "formats": ["9x16", "1x1", "16x9"],
+
+  "audio": { "music": "audio/music.wav", "style": "tech" },
+
+  "approval": { "copy": false, "by": "", "date": "", "notes": "o cliente aprova o que o vídeo DIZ (copy + claims) antes do render final" }
+}

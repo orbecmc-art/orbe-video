@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Film</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{margin:0;background:#0d0d0c;overflow:hidden}
+  canvas{display:block}
+  body:not(.render) canvas{max-height:100vh;max-width:100vw;margin:auto;}
+  #hud{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;padding:8px 12px;
+       font:12px ui-monospace,monospace;color:#ddd;background:rgba(0,0,0,.6)}
+  #hud input{flex:1} #hud select{font:inherit} body.render #hud{display:none}
+</style>
+<script src="lib/motion.js"></script>
+<script src="lib/recorder.js"></script><!-- ?player=1 (ou bundle): player com Play/Gravar; ignorado no render -->
+<script src="campaign.js"></script><!-- gerado de campaign.json por scripts/campaign.mjs sync (render/stills sincronizam sozinhos) -->
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><button id="pp">❚❚</button><input id="sc" type="range" min="0" step="0.001"><span id="tt"></span>
+  <select id="vh"></select><select id="vc"></select></div>
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   CONTRATO DE RENDER
+   • window.seek(t) (alias window.renderAt) pinta o instante t. Função pura do tempo. Nenhum estado entre frames.
+   • Proibido em modo render: CSS transitions, setTimeout/setInterval, requestAnimationFrame, Math.random, Date.now.
+   • Aleatoriedade só via M.rng(seed) / M.noise*. Tempo sempre em segundos. Loops: frames 0..N-1, ciclos inteiros.
+   • Coordenadas sempre via L (layout) e unidades u → o mesmo timeline vira 9:16, 1:1, 16:9 (re-enquadra, não recorta).
+   • DADOS ≠ ANIMAÇÃO: marca, copy, claims, ganchos e CTAs vêm de campaign.json. Aqui só se decide COMO aparecem.
+   • Contrato de variantes: o gancho só afeta t < fim da cena "hook"; o CTA só afeta t ≥ início da cena "cta".
+     (campaign.mjs valida isso e renderiza o miolo uma vez só para todas as variantes.)
+   ════════════════════════════════════════════════════════════════════════════ */
+const Q = new URLSearchParams(location.search);
+const RENDER = Q.has('render') || navigator.webdriver;
+if (RENDER) document.body.classList.add('render');
+const CP = window.CAMPAIGN;
+if (!CP) throw new Error('campaign.js ausente — rode: node scripts/campaign.mjs sync');
+const W = +Q.get('w') || 1080, H = +Q.get('h') || 1920;
+const FPS = CP.fps || 60, DURATION = CP.duration;
+const BPM = CP.bpm || 120, SPB = 60 / BPM;
+const B = (n) => n * SPB;                 // B(4) = 4ª batida → mudanças de estado caem no grid
+const SC = Object.fromEntries(CP.scenes.map((s) => [s.id, s]));
+const pick = (list, key) => { const v = Q.get(key); if (v == null) return list[0]; return list.find((x) => x.id === v) || list[+v] || list[0]; };
+const HOOK = pick(CP.hooks, 'hook'), CTA = pick(CP.ctas, 'cta');
+const CLAIM = Object.fromEntries((CP.claims || []).map((c) => [c.id, c]));
+Object.assign(window, { DURATION, FPS, BPM, VARIANT: { hook: HOOK.id, cta: CTA.id } });
+
+const c = document.getElementById('c'); c.width = W; c.height = H;
+const g = c.getContext('2d', { willReadFrequently: true });
+const L = M.layout(W, H), u = L.u;
+
+// ── LOOK (vem da marca) ──
+const C = CP.brand.colors;
+const DISPLAY = `"${CP.brand.fonts.display}","Inter Tight",system-ui,sans-serif`;
+const UI = `"${CP.brand.fonts.ui}","Inter Tight",system-ui,sans-serif`;
+const FONTS = [`800 100px ${DISPLAY}`, `700 100px ${DISPLAY}`, `600 100px ${UI}`, `500 100px ${UI}`];
+let LOGO = null;
+window.ready = Promise.all([
+  ...FONTS.map((f) => document.fonts.load(f)),                       // canvas não carrega fonte sozinho
+  CP.brand.logo ? new Promise((ok) => { const i = new Image(); i.onload = () => { LOGO = i; ok(); }; i.onerror = ok; i.src = CP.brand.logo; }) : 0,
+]);
+
+// ── layout por formato: re-enquadra (card mais largo no 16:9, mais alto no 9:16) ──
+const CARD = L.landscape ? { w: 1240, h: 760 } : L.square ? { w: 860, h: 860 } : { w: 860, h: 980 };
+const TAB_W = 210, ZOOM_CARD = 1.1;
+
+// ════════════════════════ A FORMA ÚNICA (nunca corta) ════════════════════════
+const SHAPE = {
+  x: [[0, 0]],
+  y: [[0, 130], [B(4), 0]],
+  w: [[0, 0], [B(1.6), 470], [B(4), 420], [B(6), 128], [B(7.6), CARD.w], [B(14), 640], [B(15.8), 0]],
+  h: [[0, 18], [B(4), 128], [B(7.6), CARD.h], [B(14), 120], [B(15.8), 0]],
+  r: [[0, 9], [B(4), 64], [B(7.6), 52], [B(14), 60]],
+};
+const SHAPE_COLOR = [[0, C.accent], [B(6.6), C.accent], [B(7.6), C.paper], [B(14), C.ink]];
+const ZOOM = [[0, 1], [B(4), 1.08], [B(7.6), ZOOM_CARD], [B(14), 1.06]];
+function shapeColor(t) {
+  let col = SHAPE_COLOR[0][1];
+  for (let i = 1; i < SHAPE_COLOR.length; i++) { const p = M.sp(t - SHAPE_COLOR[i][0], 'smooth'); if (p > 0) col = M.mixHex(SHAPE_COLOR[i - 1][1], SHAPE_COLOR[i][1], M.clamp(p)); }
+  return col;
+}
+
+// ── geometria compartilhada (desenho, cursor e CHECKS usam a MESMA conta — "mire pelo layout") ──
+const tabCenter = (i) => ({ x: (-CARD.w / 2 + 72 + TAB_W * (i + 0.5)) * ZOOM_CARD, y: (CARD.h / 2 - 110) * ZOOM_CARD });
+const CLICKS = [B(5.6), B(12.4)];
+const CUR = { x: [[0, 620], [B(4), 60], [B(11.2), tabCenter(1).x], [B(13.6), 470]],
+              y: [[0, 900], [B(4), 30], [B(11.2), tabCenter(1).y], [B(13.6), 1100]] };
+const cursorPos = (t) => ({ x: M.track(t, CUR.x, 'smooth'), y: M.track(t, CUR.y, 'smooth') });   // em u, relativo ao centro
+const TAB_STOPS = [[B(11), 0], [B(12.4), 1]];   // só muda com clique visível
+
+// ════════════════════════════════ CENAS ════════════════════════════════
+function sceneHook(t) {           // gancho: some por completo ANTES de SC.hook.end (contrato de variantes)
+  const H = hookLayout(HOOK), exitAt = SC.hook.end - 1.05;
+  if (HOOK.style === 'number') {
+    const out = M.tween(t, exitAt, 0.35, M.EASE.exit);
+    if (out < 1) { g.save(); g.globalAlpha = 1 - out; g.translate(0, -out * 60 * u);
+      M.maskReveal(g, t + 0.3, H.l1, { x: L.cx, y: H.y1, size: H.s1, family: DISPLAY, weight: 800, color: C.ink }); g.restore(); }
+  } else {
+    M.kinetic(g, t, H.l1, { t0: -0.3, x: L.cx, y: H.y1, size: H.s1, family: DISPLAY, weight: 800,
+      color: C.ink, tracking: -0.045, spread: 0.28, from: { y: 0.7, rot: 0.08, blur: 6 }, exit: { t: exitAt, spread: 0.15 } });
+  }
+  if (H.l2) M.kinetic(g, t, H.l2, { x: L.cx, y: H.y2, size: H.s2, family: DISPLAY, weight: 700,
+    color: HOOK.style === 'number' ? C.mute : C.ink, tracking: -0.03, t0: B(1), spread: 0.3, by: 'char', exit: { t: exitAt + 0.08, spread: 0.15 } });
+}
+// Layout do gancho calculado (não chutado): palavra-herói ocupa até 85% da largura segura; a 2ª linha fica
+// ACIMA do sublinhado (que é comum a todos os ganchos e mora em y = +130u) com folga para descendentes.
+const HOOK_WANT = (h, i) => L.type.hero * (i === 0 ? (h.style === 'number' ? 2.2 : 1.9) : 0.8);
+function hookLayout(h) {
+  const maxW = (L.safe.right - L.safe.left) * 0.85, [l1, l2] = h.lines;
+  const s1 = M.fitSize(g, l1, maxW, HOOK_WANT(h, 0), 800, DISPLAY), s2 = l2 ? M.fitSize(g, l2, maxW, HOOK_WANT(h, 1), 700, DISPLAY) : 0;
+  const underlineTop = L.cy + (130 - 9) * u, y2 = underlineTop - 0.28 * s2 - 22 * u;
+  const y1 = l2 ? y2 - 0.74 * s2 - 0.06 * s1 - 18 * u : L.cy + 0.3 * s1;
+  return { l1, l2, s1, s2, y1, y2 };
+}
+
+function sceneShape(t) {          // forma única: sublinhado → botão → loader → check → card → abas → toast
+  const v = (k, preset = k === 'w' || k === 'h' ? 'ui' : 'smooth') => M.track(t, SHAPE[k], preset);
+  const w = Math.max(0, v('w')) * u, h = Math.max(0, v('h')) * u, r = v('r') * u;
+  if (w < 1 || h < 1) return;
+  const cx = L.cx + v('x') * u, cy = L.cy + v('y') * u, zoom = M.track(t, ZOOM, 'heavy');
+  g.save(); g.translate(cx, cy); g.scale(zoom, zoom);
+  if (t > B(7.2) && t < B(14.4)) { g.shadowColor = 'rgba(20,20,19,.10)'; g.shadowBlur = 60 * u; g.shadowOffsetY = 24 * u; }
+  g.fillStyle = shapeColor(t); M.rrect(g, -w / 2, -h / 2, w, h, r); g.fill(); g.shadowColor = 'transparent';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  let a = M.swapAlpha(t, B(4.2), B(6));   // container muda em B(4), texto espera o espaço (B(4.2))
+  if (a > 0) { g.globalAlpha = a; g.fillStyle = '#fff'; M.setFont(g, 600, 44 * u, UI); g.fillText(CP.copy.button, 0, 2 * u); }
+  a = M.swapAlpha(t, B(6), B(6.4));
+  if (a > 0) { g.globalAlpha = a; g.strokeStyle = '#fff'; g.lineWidth = 9 * u; g.lineCap = 'round';
+    const s = t * 7; g.beginPath(); g.arc(0, 0, 30 * u, s, s + 1.2 + 0.8 * Math.sin(t * 5)); g.stroke(); }
+  a = M.swapAlpha(t, B(6.4), B(7.6), 0.05);
+  if (a > 0) { g.globalAlpha = a; g.strokeStyle = '#fff'; g.lineWidth = 10 * u; g.lineCap = g.lineJoin = 'round';
+    M.drawPartial(g, [[-24 * u, 2 * u], [-6 * u, 20 * u], [26 * u, -16 * u]], M.sp(t - B(6.5), 'snappy')); }
+  a = M.swapAlpha(t, B(7.8), B(14));
+  if (a > 0) drawCard(t, a, w, h);
+  a = M.swapAlpha(t, B(14), B(15.8));
+  if (a > 0) { g.globalAlpha = a; g.fillStyle = '#fff'; M.setFont(g, 600, 40 * u, UI); g.textAlign = 'left';
+    g.fillText(CP.copy.toast, -w / 2 + 110 * u, 2 * u);
+    g.fillStyle = C.accent; g.beginPath(); g.arc(-w / 2 + 64 * u, 0, 18 * u * M.sp(t - B(14.2), 'playful'), 0, 7); g.fill(); }
+  g.restore();
+}
+
+function drawCard(t, a, w, h) {
+  g.save(); g.globalAlpha = a; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  const x0 = -w / 2 + 64 * u, y0 = -h / 2 + 100 * u;
+  g.fillStyle = C.mute; M.setFont(g, 500, 38 * u, UI); g.fillText(CP.copy.metricLabel, x0, y0);
+  const n = M.count(t, CLAIM.leads.value, B(8.2));              // número vem de um CLAIM aprovado
+  g.fillStyle = C.ink; M.setFont(g, 700, 96 * u, DISPLAY); g.letterSpacing = (-0.03 * 96 * u) + 'px';
+  g.fillText(n.toLocaleString('pt-BR') + (CLAIM.leads.unit || ''), x0, y0 + 100 * u); g.letterSpacing = '0px';
+  const vals = [0.32, 0.45, 0.38, 0.6, 0.52, 0.74, 0.68, 0.92], gap = 26 * u, base = h / 2 - 210 * u;
+  const bw = Math.min(110 * u, (w - 128 * u - gap * (vals.length - 1)) / vals.length);   // barras ocupam a largura do card em qualquer formato
+  const barMax = Math.min(420, CARD.h - 400) * u;
+  vals.forEach((val, i) => {
+    const p = M.sp(t - B(8.6) - M.stagger(i, vals.length, 0.5), 'ui'), bh = val * barMax * p, x = x0 + i * (bw + gap);
+    g.fillStyle = i === vals.length - 1 ? C.accent : C.soft; M.rrect(g, x, base - bh, bw, bh, 14 * u); g.fill();
+  });
+  const tabW = TAB_W * u, ty = h / 2 - 110 * u, tabsIn = M.sp(t - B(10.2), 'ui');
+  if (tabsIn > 0.01) {
+    g.globalAlpha = a * M.clamp(tabsIn * 1.5);
+    g.fillStyle = C.bg; M.rrect(g, x0, ty - 44 * u, tabW * 3 + 16 * u, 88 * u, 44 * u); g.fill();
+    const ind = M.stretch(t, TAB_STOPS.map(([tt, i]) => [tt, i * tabW]), tabW);
+    g.fillStyle = C.ink; M.rrect(g, x0 + 8 * u + ind.left, ty - 36 * u, ind.right - ind.left, 72 * u, 36 * u); g.fill();
+    M.setFont(g, 600, 34 * u, UI); g.textAlign = 'center'; g.textBaseline = 'middle';
+    CP.copy.tabs.forEach((tb, i) => {
+      const center = x0 + 8 * u + i * tabW + tabW / 2, under = center > x0 + 8 * u + ind.left && center < x0 + 8 * u + ind.right;
+      g.fillStyle = under ? '#fff' : C.mute; g.fillText(tb, center, ty + 2 * u);
+    });
+  }
+  g.restore();
+}
+
+function sceneProof(t) {          // prova: um CLAIM aprovado em número grande; grade nasce do centro
+  const lt = t - B(15.8);
+  if (lt < 0 || t > B(20.2)) return;
+  const r = M.rng(11), size = 150 * u, gap = 14 * u, step = size + gap;
+  const cols = Math.ceil(W / step) + 1, rows = Math.ceil(H / step) + 1, ccx = (cols - 1) / 2, ccy = (rows - 1) / 2;
+  const ox = L.cx - (cols * step) / 2, oy = L.cy - (rows * step) / 2, out = M.tween(t, B(19.4), 0.5, M.EASE.exit);
+  for (let i = 0; i < cols * rows; i++) {
+    const gx = i % cols, gy = Math.floor(i / cols), d = Math.hypot(gx - ccx, gy - ccy) * 0.05 + r() * 0.06;
+    const p = M.sp(lt - d, 'snappy') * (1 - out), s = size * p;
+    if (s < 0.5) continue;
+    g.fillStyle = (i * 7) % 11 === 0 ? C.accent : C.soft;
+    M.rrect(g, ox + gx * step + (size - s) / 2, oy + gy * step + (size - s) / 2, s, s, 24 * u * p); g.fill();
+  }
+  const cl = CLAIM.retencao, words = cl.text.replace(/^[+\-]?[\d.,]+%?\s*/, '');
+  g.save(); g.globalAlpha = 1 - out;
+  const bp = M.sp(lt - 0.05, 'snappy');
+  g.fillStyle = C.bg; M.rrect(g, L.cx - 400 * u * bp, L.cy - 230 * u * bp - 20 * u, 800 * u * bp, 420 * u * bp, 40 * u); g.fill();
+  const pct = M.count(t, cl.value, B(15.8) + 0.25);
+  M.maskReveal(g, lt, `+${pct}${cl.unit || ''}`, { x: L.cx, y: L.cy + 30 * u, size: 230 * u, family: DISPLAY, weight: 800, color: C.ink, t0: 0.15 });
+  M.kinetic(g, lt, words, { x: L.cx, y: L.cy + 130 * u, size: 54 * u, family: UI, weight: 500, color: C.mute, by: 'word', t0: 0.55, spread: 0.15 });
+  g.restore();
+}
+
+function sceneSign(t) {           // assinatura + CTA. O CTA só existe a partir de SC.cta.start (contrato de variantes)
+  const lt = t - B(20);
+  if (lt < 0) return;
+  const s = M.sp(lt, 'playful');
+  g.save(); g.translate(L.cx, L.cy - 150 * u); g.scale(s, s); g.rotate((1 - M.sp(lt, 'heavy')) * -0.2);
+  if (LOGO) { const lh = 150 * u, lw = lh * LOGO.width / LOGO.height; g.drawImage(LOGO, -lw / 2, -lh / 2, lw, lh); }
+  else { g.fillStyle = C.accent; g.beginPath(); g.arc(0, 0, 70 * u, 0, 7); g.fill(); g.fillStyle = C.bg; M.rrect(g, -12 * u, -42 * u, 24 * u, 84 * u, 12 * u); g.fill(); }
+  g.restore();
+  M.maskReveal(g, lt, CP.brand.name, { x: L.cx, y: L.cy + 50 * u, size: 120 * u, family: DISPLAY, weight: 800, color: C.ink, t0: 0.2 });
+  const ct = t - SC.cta.start - 0.45;                      // CTA: pílula entra, texto depois do morph
+  if (ct > 0) {
+    M.setFont(g, 600, 44 * u, UI);
+    const tw = g.measureText(CTA.text).width, pw = (tw + 120 * u) * M.sp(ct, 'ui'), ph = 104 * u;
+    g.fillStyle = C.ink; M.rrect(g, L.cx - pw / 2, L.cy + 130 * u, pw, ph, ph / 2); g.fill();
+    const ta = M.swapAlpha(t, SC.cta.start + 0.45, 1e9);
+    if (ta > 0) { g.save(); g.globalAlpha = ta; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(CTA.text, L.cx, L.cy + 130 * u + ph / 2 + 2 * u); g.restore(); }
+    M.kinetic(g, ct - 0.25, CP.brand.url, { x: L.cx, y: L.cy + 300 * u, size: 34 * u, family: UI, weight: 500, color: C.mute, spread: 0.25 });
+  }
+}
+
+function drawCursor(t) {
+  if (t < B(4) || t > B(13.6)) return;
+  const p = cursorPos(t), pr = Math.max(...CLICKS.map((tc) => M.press(t, tc)));
+  M.cursor(g, L.cx + p.x * u, L.cy + p.y * u, pr, 1.6 * u);
+}
+
+// ════════════════════════════════ SOM (fonte única da verdade) ════════════════════════════════
+// sfx.mjs --page index.html lê isto. t = instante do EVENTO VISUAL; o sfx.mjs põe o PICO do som em t + 1 frame.
+window.CUES = [
+  { t: 0, type: 'thump' }, { t: 0.02, type: 'whoosh', pitch: 1.4, gain: 0.5 },
+  { t: B(1), type: 'pop', gain: 0.5 }, { t: B(1.6), type: 'swish', gain: 0.6 },
+  { t: SC.hook.end - 1.05, type: 'whoosh', gain: 0.5 }, { t: B(4.6), type: 'swipe', gain: 0.4 },
+  ...CLICKS.map((t) => ({ t, type: 'click' })),
+  { t: B(6), type: 'bloop', gain: 0.5 }, { t: B(6.4), type: 'ding', gain: 0.7 },
+  { t: B(7.6), type: 'swish', gain: 0.7, pitch: 0.8 }, { t: B(8.2), type: 'tick', gain: 0.4 },
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ t: B(8.6) + M.stagger(i, 8, 0.5), type: 'tick', gain: 0.35, pitch: 0.8 + i * 0.06 })),
+  { t: B(10.2), type: 'pop', gain: 0.4 },
+  { t: B(14), type: 'chime', gain: 0.6 }, { t: B(15.8), type: 'impact', gain: 0.8 },
+  { t: B(19.4), type: 'whoosh', gain: 0.5 }, { t: B(20), type: 'boom', gain: 0.7 }, { t: SC.cta.start + 0.45, type: 'pop', gain: 0.5, pitch: 1.2 },
+];
+
+// ════════════════════════════════ BOARD (aprovação) ════════════════════════════════
+window.SHOTS = [
+  { from: 0,      to: SC.hook.end, key: 1.2,   name: `Gancho (${HOOK.id})`, read: HOOK.lines.join(' '), text: HOOK.lines.join(' / '), sfx: 'thump, pop, swish', out: 'sublinhado vira botão' },
+  { from: B(4.2), to: B(6), key: B(5.4), name: 'Botão',            read: 'há uma ação a tomar',     text: CP.copy.button,      sfx: 'swipe, click',  out: 'botão encolhe em loader' },
+  { from: B(6), to: B(7.6),  key: B(6.9),  name: 'Loader → check',    read: 'processou e deu certo',   text: '—',                 sfx: 'bloop, ding',   out: 'check expande em card' },
+  { from: B(7.6), to: B(14),   key: B(13.3), name: 'Card de métricas',  read: CLAIM.leads.text,          text: CP.copy.metricLabel, sfx: 'swish, ticks, click', out: 'card vira toast' },
+  { from: B(14),  to: B(15.8), key: B(15.0), name: 'Toast',             read: 'publicado',               text: CP.copy.toast,       sfx: 'chime',         out: 'toast colapsa e vira a grade' },
+  { from: B(15.8),to: B(20),   key: B(18),   name: 'Prova',             read: CLAIM.retencao.text,       text: CLAIM.retencao.text, sfx: 'impact',        out: 'grade recolhe' },
+  { from: B(20),  to: DURATION, key: DURATION - 0.3, name: `Assinatura + CTA (${CTA.id})`, read: 'quem é + o que fazer', text: `${CP.brand.name} / ${CTA.text}`, sfx: 'boom, pop', out: 'fim (frame de capa)' },
+];
+
+// ════════════════════════ LABORATÓRIO: sondas, checagens numéricas, validação ════════════════════════
+// PROBES → stills.mjs --graph desenha valor×frame (linha reta = linear; quina = parada morta).
+window.PROBES = {
+  'shape.w': (t) => M.track(t, SHAPE.w, 'ui'), 'shape.h': (t) => M.track(t, SHAPE.h, 'ui'),
+  'cursor.x': (t) => cursorPos(t).x, 'cursor.y': (t) => cursorPos(t).y, 'camera.zoom': (t) => M.track(t, ZOOM, 'heavy'),
+};
+// CHECKS → stills.mjs --checks: cada número do brief vira um teste (true = passou; string = o que falhou).
+window.CHECKS = [
+  ...CLICKS.map((tc, i) => ({ t: tc, name: `cursor parado no clique ${i + 1}`, test: (t) => { const a = cursorPos(t - 1 / FPS), b = cursorPos(t); const v = Math.hypot(b.x - a.x, b.y - a.y) * FPS; return v < 40 || `cursor a ${v.toFixed(0)} u/s no clique` } })),
+  { t: CLICKS[1], name: 'clique 2 em cima da aba 2', test: (t) => { const p = cursorPos(t), tc = tabCenter(1), d = Math.hypot(p.x - tc.x, p.y - tc.y); return d < 30 || `cursor a ${d.toFixed(0)}u do centro da aba` } },
+  { t: B(13.8), name: 'indicador chegou na aba 2', test: (t) => { const s = M.stretch(t, TAB_STOPS.map(([tt, i]) => [tt, i * TAB_W]), TAB_W); return Math.abs(s.left - TAB_W) < 4 || `indicador em ${s.left.toFixed(1)}` } },
+  { t: B(12), name: 'contador terminou no valor do claim', test: (t) => M.count(t, CLAIM.leads.value, B(8.2)) === CLAIM.leads.value || 'contador ainda subindo' },
+  { t: SC.hook.end - 1 / FPS, name: 'gancho saiu antes do fim da cena', test: () => true },   // verificado por pixel no campaign.mjs validate
+];
+// VALIDATE → campaign.mjs validate: texto que não cabe, fonte que não carregou, leitura curta demais.
+window.VALIDATE = () => {
+  const issues = [];
+  FONTS.forEach((f) => { if (!document.fonts.check(f)) issues.push(`fonte não carregou: ${f}`); });
+  const maxW = (L.safe.right - L.safe.left) * 0.85;
+  CP.hooks.forEach((h) => h.lines.forEach((ln, i) => {
+    const want = HOOK_WANT(h, i);
+    const got = M.fitSize(g, ln, maxW, want, i ? 700 : 800, DISPLAY);
+    if (got < want * 0.6) issues.push(`gancho "${h.id}": "${ln}" encolheria para ${Math.round(100 * got / want)}% — corte palavras`);
+    if (i === 0 && got * 0.72 < 0.06 * H) issues.push(`gancho "${h.id}": palavra-herói pequena demais (${Math.round(got)}px)`);
+    const words = h.lines.join(' ').split(/\s+/).length, need = 0.5 + 0.3 * words, has = SC.hook.end - 1.05 + 0.02;
+    if (i === 0 && has < need) issues.push(`gancho "${h.id}": ${words} palavras pedem ${need.toFixed(1)}s no ar, tem ${has.toFixed(1)}s`);
+  }));
+  CP.ctas.forEach((ct) => { M.setFont(g, 600, 44 * u, UI); const w = g.measureText(ct.text).width + 120 * u; if (w > W - 2 * L.safe.left) issues.push(`CTA "${ct.id}" não cabe (${Math.round(w)}px)`); });
+  return issues;
+};
+
+// ════════════════════════════════ COMPOSIÇÃO ════════════════════════════════
+function draw(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1; g.filter = 'none'; g.shadowColor = 'transparent';
+  if (Q.has('alpha')) g.clearRect(0, 0, W, H); else { g.fillStyle = C.bg; g.fillRect(0, 0, W, H); }   // ?alpha=1 (render --alpha): fundo transparente p/ pôr sobre vídeo
+  const [hx, hy] = M.handheld(t, 2.5 * u, 0.5);
+  g.translate(hx, hy);
+  if (t < SC.hook.end) sceneHook(t);
+  if (t > B(1.4) && t < B(16.5)) sceneShape(t);
+  sceneProof(t);
+  sceneSign(t);
+  drawCursor(t);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (!Q.has('alpha')) M.grain(g, W, H, t, 0.05);
+  if (Q.has('debug')) debugOverlay(t);
+}
+function debugOverlay(t) {        // ?debug=1 → frame, tempo, batida e plano no canto (para anotar "frame 84"); nunca no render final
+  const f = Math.round(t * FPS), shot = (window.SHOTS.find((s) => t >= s.from && t < s.to) || {}).name || '';
+  g.save(); g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(16, 16, 520 * u, 54 * u);
+  g.fillStyle = '#fff'; g.font = `600 ${26 * u}px ui-monospace,monospace`; g.textBaseline = 'middle';
+  g.fillText(`f ${String(f).padStart(4, '0')} · ${t.toFixed(2)}s · B${(t / SPB).toFixed(1)} · ${shot}`, 28, 16 + 27 * u); g.restore();
+}
+window.seek = (t) => { draw(M.clamp(t, 0, DURATION - 1e-4)); return true; }; // subframes de blur podem pedir t<0
+window.renderAt = window.seek;
+
+// ── ?t=2.5 congela o frame exato (para olhar/printar/descrever um instante) ──
+if (Q.has('t')) window.ready.then(() => window.seek(+Q.get('t') || 0));
+// ── preview ao vivo. Espaço = play/pause · ←/→ = frame · Shift+←/→ = batida · ?debug=1 = contador de frame ──
+else if (!RENDER && !window.__PLAYER) {
+  const sc = document.getElementById('sc'), pp = document.getElementById('pp'), tt = document.getElementById('tt');
+  const vh = document.getElementById('vh'), vc = document.getElementById('vc');
+  CP.hooks.forEach((h) => vh.add(new Option('gancho: ' + h.id, h.id, false, h.id === HOOK.id)));
+  CP.ctas.forEach((x) => vc.add(new Option('cta: ' + x.id, x.id, false, x.id === CTA.id)));
+  const go = () => { Q.set('hook', vh.value); Q.set('cta', vc.value); location.search = Q.toString(); };
+  vh.onchange = go; vc.onchange = go;
+  sc.max = DURATION; let playing = true, t0 = performance.now(), cur = 0;
+  const show = (t) => { cur = t; window.seek(t); sc.value = t; tt.textContent = `f ${Math.round(t * FPS)} · ${t.toFixed(2)}s · B${Math.floor(t / SPB)}`; };
+  window.ready.then(() => (function loop() { if (playing) show(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })());
+  const toggle = () => { playing = !playing; pp.textContent = playing ? '❚❚' : '▶'; t0 = performance.now() - cur * 1000; };
+  pp.onclick = toggle; sc.oninput = () => { playing = false; pp.textContent = '▶'; show(+sc.value); };
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    const step = e.shiftKey ? SPB : 1 / FPS;
+    if (e.code === 'ArrowRight') { playing = false; show(Math.min(DURATION, cur + step)); }
+    if (e.code === 'ArrowLeft') { playing = false; show(Math.max(0, cur - step)); }
+  });
+}
+</script>
+</body>
+</html>

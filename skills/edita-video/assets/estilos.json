@@ -1,0 +1,1445 @@
+{
+ "_comentario": "Presets de edição. briefing.json escolhe 'estilo' e pode sobrescrever qualquer chave em 'ajustes'. Números vêm de references/estilos.md (fontes: LeiteZ, video-use, HyperFrames media-use, pesquisa de short-form 2025-26).",
+ "_base": {
+  "cortes": {
+   "pausa_max": 0.4,
+   "folga_antes": 0.08,
+   "folga_depois": 0.13,
+   "ar_frases": 0.12,
+   "fade_ms": 30,
+   "min_trecho": 0.2,
+   "vicios": "isolados",
+   "pausa_vicio": 0.15,
+   "retake_sim": 0.85,
+   "retake_min_palavras": 4
+  },
+  "legendas": {
+   "ativo": true,
+   "palavras": 3,
+   "max_car": 18,
+   "caixa": "alta",
+   "fonte": "Montserrat",
+   "peso": 800,
+   "tamanho": 0.066,
+   "cor": "#FFFFFF",
+   "destaque": "#FFD43B",
+   "contorno": 0.0075,
+   "sombra": 0.003,
+   "animacao": "pop",
+   "y": 0.66,
+   "enfase_cor": true
+  },
+  "camera": {
+   "reenquadrar": true,
+   "zoom_alterna": [
+    1.0,
+    1.1
+   ],
+   "punch": 0.06,
+   "punch_intervalo": 5.0,
+   "push": 0.025,
+   "olhos_y": 0.36,
+   "zona_morta": 0.1,
+   "suavidade": 0.45,
+   "max_zoom": 1.22,
+   "snap": 0.25,
+   "punch_modo": "enfase",
+   "punch_alterna": false,
+   "punch_rampa": 0.18
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -21,
+   "duck_db": 10,
+   "sfx": "moderado",
+   "sfx_por_30s": 7,
+   "voz": "limpar"
+  },
+  "cor": {
+   "preset": "natural"
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    2,
+    4
+   ],
+   "rosto_entre": 2.0
+  },
+  "broll": {
+   "cada_s": [
+    5,
+    8
+   ],
+   "dur": [
+    1.5,
+    3.0
+   ],
+   "kenburns": 0.06
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    3,
+    5
+   ],
+   "parado_max": 5.5,
+   "plano_min": 0.75,
+   "fim_max": 2.0,
+   "ppm": [
+    150,
+    200
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade",
+   "zoom",
+   "whip",
+   "flash",
+   "deslize",
+   "recuo"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "palavra",
+     "rosto:split",
+     "numero"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "palavra",
+     "frase",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "lista",
+     "check",
+     "capitulos"
+    ]
+   },
+   "numero": {
+    "usa": [
+     "numero",
+     "slam",
+     "anel"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "broll",
+     "foto"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "frase",
+     "notificacao",
+     "recorte"
+    ]
+   },
+   "fim": {
+    "usa": [
+     "cta",
+     "rosto"
+    ]
+   }
+  }
+ },
+ "clinica-premium": {
+  "_descricao": "Médico/clínica: calmo, confiável, sem cara de meme. Legenda limpa, zoom discreto, som de cuidado.",
+  "cortes": {
+   "pausa_max": 0.45,
+   "folga_depois": 0.15,
+   "ar_frases": 0.16
+  },
+  "legendas": {
+   "palavras": 4,
+   "max_car": 22,
+   "caixa": "frase",
+   "fonte": "Montserrat",
+   "peso": 700,
+   "tamanho": 0.058,
+   "destaque": "#9FE3E0",
+   "animacao": "fade"
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.08
+   ],
+   "punch": 0.045,
+   "punch_intervalo": 8.0,
+   "push": 0.03,
+   "suavidade": 0.6,
+   "punch_modo": "viradas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -16,
+   "musica_db": -23,
+   "sfx": "discreto",
+   "sfx_por_30s": 5,
+   "trilha_estilo": "warm"
+  },
+  "cor": {
+   "preset": "natural"
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    2,
+    3
+   ]
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    3,
+    4
+   ],
+   "parado_max": 5.0,
+   "fim_max": 2.5,
+   "ppm": [
+    150,
+    180
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade",
+   "deslize"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "rosto:split"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "rosto",
+     "frase"
+    ]
+   },
+   "item": {
+    "usa": [
+     "lista",
+     "check"
+    ],
+    "entra": "fade"
+   },
+   "numero": {
+    "usa": [
+     "numero",
+     "anel"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "rosto:split"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas"
+    ],
+    "entra": "fade"
+   },
+   "fim": {
+    "usa": [
+     "cta",
+     "rosto"
+    ]
+   }
+  }
+ },
+ "dinamico": {
+  "_descricao": "Reels/TikTok de retenção: pausa curta, legenda 2 palavras caixa alta com palavra ativa, punch frequente, SFX em todo evento.",
+  "cortes": {
+   "pausa_max": 0.3,
+   "folga_antes": 0.06,
+   "folga_depois": 0.11,
+   "ar_frases": 0.09
+  },
+  "legendas": {
+   "palavras": 2,
+   "max_car": 15,
+   "caixa": "alta",
+   "fonte": "Montserrat",
+   "peso": 900,
+   "tamanho": 0.074,
+   "destaque": "#FFD43B",
+   "animacao": "pop",
+   "chave_caixa": true,
+   "chave_tinta": "#111111",
+   "chave_inclina": -2.5
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.14
+   ],
+   "punch": 0.08,
+   "punch_intervalo": 3.0,
+   "push": 0.02,
+   "suavidade": 0.35,
+   "punch_modo": "linha",
+   "punch_alterna": true,
+   "punch_rampa": 0.07
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -19,
+   "sfx": "intenso",
+   "sfx_por_30s": 12,
+   "trilha_estilo": "tech"
+  },
+  "cor": {
+   "preset": "punch"
+  },
+  "motion": {
+   "densidade": "alta",
+   "por_minuto": [
+    4,
+    7
+   ]
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    1.5,
+    2.5
+   ],
+   "parado_max": 3.0,
+   "fim_max": 1.0,
+   "ppm": [
+    180,
+    220
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "zoom",
+   "flash",
+   "whip",
+   "recuo"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "palavra",
+     "rosto:split"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "palavra",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "lista",
+     "check"
+    ],
+    "entra": "zoom"
+   },
+   "numero": {
+    "usa": [
+     "slam",
+     "numero",
+     "anel"
+    ],
+    "entra": "flash"
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "broll"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "notificacao"
+    ],
+    "entra": "zoom"
+   },
+   "fim": {
+    "usa": [
+     "cta",
+     "rosto"
+    ]
+   }
+  },
+  "split_fio": "accent"
+ },
+ "luxo": {
+  "_descricao": "Concessionária premium/joalheria: lento, elegante, legenda mínima, som de impacto só nas revelações.",
+  "cortes": {
+   "pausa_max": 0.5,
+   "folga_depois": 0.18,
+   "ar_frases": 0.2
+  },
+  "legendas": {
+   "palavras": 4,
+   "max_car": 22,
+   "caixa": "frase",
+   "fonte": "Montserrat",
+   "peso": 600,
+   "tamanho": 0.052,
+   "destaque": "#E9D8A6",
+   "animacao": "fade",
+   "contorno": 0.0,
+   "sombra": 0.004
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.06
+   ],
+   "punch": 0.0,
+   "punch_intervalo": 99,
+   "push": 0.04,
+   "suavidade": 0.8,
+   "punch_modo": "viradas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -17,
+   "sfx": "discreto",
+   "sfx_por_30s": 4,
+   "trilha_estilo": "cinematic"
+  },
+  "cor": {
+   "preset": "cinema"
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    1,
+    3
+   ]
+  },
+  "transicao": "suave",
+  "ritmo": {
+   "mudanca": [
+    3,
+    4
+   ],
+   "parado_max": 5.5,
+   "fim_max": 2.5,
+   "ppm": [
+    140,
+    170
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "broll"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "rosto",
+     "frase"
+    ]
+   },
+   "item": {
+    "usa": [
+     "broll",
+     "foto",
+     "lista"
+    ],
+    "entra": "fade"
+   },
+   "numero": {
+    "usa": [
+     "numero"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "broll"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas"
+    ],
+    "entra": "fade"
+   },
+   "fim": {
+    "usa": [
+     "cta",
+     "rosto"
+    ]
+   }
+  }
+ },
+ "educativo": {
+  "_descricao": "Explicação/dica: claro, cards e números na tela, legenda média, punch nas palavras-chave.",
+  "cortes": {
+   "pausa_max": 0.35
+  },
+  "legendas": {
+   "palavras": 3,
+   "max_car": 18,
+   "caixa": "alta",
+   "peso": 800,
+   "tamanho": 0.066,
+   "animacao": "pop"
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.1
+   ],
+   "punch": 0.06,
+   "punch_intervalo": 4.0,
+   "punch_modo": "tonicas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -22,
+   "sfx": "moderado",
+   "sfx_por_30s": 7,
+   "trilha_estilo": "minimal"
+  },
+  "cor": {
+   "preset": "natural"
+  },
+  "motion": {
+   "densidade": "alta",
+   "por_minuto": [
+    4,
+    6
+   ]
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    2.5,
+    3.5
+   ],
+   "parado_max": 4.5,
+   "fim_max": 2.0,
+   "ppm": [
+    160,
+    190
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "deslize",
+   "fade",
+   "zoom",
+   "recuo"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "rosto:split"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "frase",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "lista",
+     "capitulos",
+     "check"
+    ],
+    "entra": "deslize"
+   },
+   "numero": {
+    "usa": [
+     "numero",
+     "anel",
+     "grafico"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "rosto:split",
+     "rosto:janela"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "recorte"
+    ],
+    "entra": "deslize"
+   },
+   "fim": {
+    "usa": [
+     "cta",
+     "rosto"
+    ]
+   }
+  }
+ },
+ "varejo": {
+  "_descricao": "Oferta/loja: energia alta, preço e CTA grandes, SFX de caixa registradora só no preço.",
+  "cortes": {
+   "pausa_max": 0.3,
+   "folga_antes": 0.06,
+   "folga_depois": 0.11
+  },
+  "legendas": {
+   "palavras": 2,
+   "max_car": 15,
+   "caixa": "alta",
+   "peso": 900,
+   "tamanho": 0.076,
+   "destaque": "#FF5A4B",
+   "animacao": "pop",
+   "chave_caixa": true,
+   "chave_tinta": "#111111",
+   "chave_inclina": -2.5
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.14
+   ],
+   "punch": 0.07,
+   "punch_intervalo": 3.0,
+   "punch_modo": "linha",
+   "punch_alterna": true,
+   "punch_rampa": 0.1
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -18,
+   "sfx": "intenso",
+   "sfx_por_30s": 10,
+   "trilha_estilo": "warm"
+  },
+  "cor": {
+   "preset": "produto"
+  },
+  "motion": {
+   "densidade": "alta",
+   "por_minuto": [
+    4,
+    7
+   ]
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    1.5,
+    2.5
+   ],
+   "parado_max": 3.0,
+   "fim_max": 1.5,
+   "ppm": [
+    175,
+    215
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "flash",
+   "whip",
+   "zoom",
+   "recuo"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "titulo",
+     "slam",
+     "palavra"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "palavra",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "check",
+     "lista"
+    ],
+    "entra": "whip"
+   },
+   "numero": {
+    "usa": [
+     "slam",
+     "numero"
+    ],
+    "entra": "flash"
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "broll",
+     "foto"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "notificacao"
+    ],
+    "entra": "whip"
+   },
+   "fim": {
+    "usa": [
+     "cta"
+    ]
+   }
+  },
+  "split_fio": "accent"
+ },
+ "minimal": {
+  "_descricao": "Minimal premium (o 'look Arthur Brooks'): papel, serifa itálica + sans, uma cor fosca de acento (azul), legenda cinematográfica de 2 tamanhos, cenas de linha, gráfico, pintura e aspas alternando com o rosto. Calmo, artístico, alto valor percebido — educativo premium, médicos, advogados, mentores.",
+  "cortes": {
+   "pausa_max": 0.36,
+   "folga_antes": 0.06,
+   "folga_depois": 0.12,
+   "ar_frases": 0.16
+  },
+  "legendas": {
+   "layout": "cinema",
+   "palavras": 4,
+   "max_car": 30,
+   "caixa": "frase",
+   "fonte": "Inter",
+   "peso": 500,
+   "fonte2": "Playfair Display",
+   "peso_chave": 800,
+   "peso_chave2": 700,
+   "tamanho": 0.044,
+   "escala_chave": 1.9,
+   "cor": "#F3EFE7",
+   "destaque": "#6E8FC6",
+   "contorno": 0.0,
+   "sombra": 0.0035,
+   "animacao": "palavra",
+   "y": 0.64,
+   "enfase_cor": true,
+   "faixa_desfoque": true
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.05
+   ],
+   "punch": 0.035,
+   "punch_intervalo": 9.0,
+   "push": 0.03,
+   "suavidade": 0.7,
+   "punch_modo": "viradas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -20,
+   "sfx": "discreto",
+   "sfx_por_30s": 6,
+   "trilha_estilo": "piano",
+   "familias": "minimal"
+  },
+  "cor": {
+   "preset": "fosco"
+  },
+  "motion": {
+   "densidade": "bastante",
+   "por_minuto": [
+    4,
+    7
+   ],
+   "rosto_entre": 2.0,
+   "look": "papel"
+  },
+  "broll": {
+   "cada_s": [
+    5,
+    9
+   ],
+   "dur": [
+    1.8,
+    3.2
+   ],
+   "kenburns": 0.05,
+   "tratamento": "papel"
+  },
+  "transicao": "corte",
+  "marca_padrao": {
+   "accent": "#6E8FC6",
+   "bg": "#121315",
+   "paper": "#EEEAE2",
+   "ink": "#1B1B1C",
+   "mute": "#8C877E",
+   "display": "Playfair Display",
+   "ui": "Inter"
+  },
+  "ritmo": {
+   "mudanca": [
+    3,
+    4
+   ],
+   "parado_max": 5.0,
+   "fim_max": 3.0,
+   "ppm": [
+    150,
+    180
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade",
+   "deslize",
+   "recuo"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "frase",
+     "rosto:split",
+     "titulo"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "frase",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "capitulos",
+     "linha",
+     "lista"
+    ],
+    "entra": "deslize"
+   },
+   "numero": {
+    "usa": [
+     "grafico",
+     "numero",
+     "anel"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "rosto:janela",
+     "broll"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "frase"
+    ],
+    "entra": "fade"
+   },
+   "fim": {
+    "usa": [
+     "aspas",
+     "cta",
+     "rosto"
+    ]
+   }
+  }
+ },
+ "dossie": {
+  "_descricao": "Dossiê (gramática do @odossie.br e do filme 'A conta'): papelão e papel com sombra de persiana, tarjas pretas e etiquetas amarelas de papel rasgado, fotos com fita, faixa vermelha com palavra gigante, quadradinhos que fazem a conta, legenda em serifa itálica. Jornalístico, investigativo, 'fizemos a conta' — dados, denúncia, opinião, mercado.",
+  "cortes": {
+   "pausa_max": 0.3,
+   "folga_antes": 0.06,
+   "folga_depois": 0.11,
+   "ar_frases": 0.1
+  },
+  "legendas": {
+   "layout": "padrao",
+   "fonte": "Instrument Serif",
+   "italico": true,
+   "peso": 400,
+   "palavras": 5,
+   "max_car": 30,
+   "caixa": "frase",
+   "tamanho": 0.054,
+   "cor": "#F5F2E8",
+   "destaque": "#F5F2E8",
+   "contorno": 0.0045,
+   "sombra": 0.003,
+   "animacao": "fade",
+   "y": 0.7,
+   "enfase_cor": true
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.07
+   ],
+   "punch": 0.05,
+   "punch_intervalo": 6.0,
+   "push": 0.02,
+   "suavidade": 0.55,
+   "punch_modo": "tonicas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -21,
+   "sfx": "moderado",
+   "sfx_por_30s": 9,
+   "trilha_estilo": "piano",
+   "familias": "minimal"
+  },
+  "cor": {
+   "preset": "documental"
+  },
+  "motion": {
+   "densidade": "alta",
+   "por_minuto": [
+    5,
+    9
+   ],
+   "rosto_entre": 1.2,
+   "look": "dossie"
+  },
+  "broll": {
+   "cada_s": [
+    4,
+    7
+   ],
+   "dur": [
+    1.5,
+    3.0
+   ],
+   "kenburns": 0.05,
+   "tratamento": "papel"
+  },
+  "transicao": "corte",
+  "marca_padrao": {
+   "accent": "#F0CA35",
+   "bg": "#16161A",
+   "paper": "#EFE9DC",
+   "ink": "#121210",
+   "mute": "#5A574C",
+   "display": "Inter Tight",
+   "ui": "Inter Tight",
+   "serif": "Instrument Serif",
+   "faixa": "Anton",
+   "mao": "Caveat"
+  },
+  "ritmo": {
+   "mudanca": [
+    2,
+    3
+   ],
+   "parado_max": 4.0,
+   "fim_max": 2.0,
+   "ppm": [
+    160,
+    200
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "flash",
+   "deslize"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "etiqueta",
+     "titulo"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "faixa",
+     "etiqueta",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "colagem",
+     "etiqueta"
+    ]
+   },
+   "numero": {
+    "usa": [
+     "grade",
+     "numero",
+     "etiqueta"
+    ],
+    "entra": "flash"
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "broll"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "recorte",
+     "aspas"
+    ]
+   },
+   "fim": {
+    "usa": [
+     "aspas",
+     "cta"
+    ]
+   }
+  }
+ },
+ "podcast-pb": {
+  "_descricao": "Corte de podcast/conversa cinematográfico em preto e branco: grão, contraste moody, legenda que se monta palavra a palavra até formar a frase, palavra-chave em serifa itálica, palavras atrás da cabeça nos picos, quebra de padrão com reverb.",
+  "cortes": {
+   "pausa_max": 0.32,
+   "folga_antes": 0.07,
+   "folga_depois": 0.12,
+   "ar_frases": 0.1
+  },
+  "legendas": {
+   "palavras": 5,
+   "max_car": 30,
+   "caixa": "frase",
+   "fonte": "Inter",
+   "peso": 600,
+   "fonte2": "Playfair Display",
+   "tamanho": 0.056,
+   "cor": "#FFFFFF",
+   "destaque": "#FFFFFF",
+   "contorno": 0.0,
+   "sombra": 0.0,
+   "animacao": "monta",
+   "chave_serifa": true,
+   "y": 0.7,
+   "enfase_cor": false,
+   "halo": true,
+   "faixa_desfoque": true
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.12
+   ],
+   "punch": 0.05,
+   "punch_intervalo": 4.0,
+   "push": 0.03,
+   "suavidade": 0.5,
+   "punch_modo": "tonicas",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -22,
+   "sfx": "discreto",
+   "sfx_por_30s": 5,
+   "trilha_estilo": "cinematic"
+  },
+  "cor": {
+   "preset": "pb",
+   "grao": 0.05
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    1,
+    3
+   ],
+   "rosto_entre": 2.5
+  },
+  "broll": {
+   "tratamento": "pb"
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    2.5,
+    3.5
+   ],
+   "parado_max": 4.5,
+   "fim_max": 2.0,
+   "ppm": [
+    150,
+    190
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade",
+   "zoom"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "palavra",
+     "frase"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "palavra",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "rosto",
+     "lista"
+    ]
+   },
+   "numero": {
+    "usa": [
+     "numero",
+     "slam"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "aspas",
+     "frase"
+    ]
+   },
+   "fim": {
+    "usa": [
+     "rosto",
+     "cta"
+    ]
+   }
+  },
+  "marca_padrao": {
+   "accent": "#FFFFFF",
+   "ink": "#0C0C0C",
+   "paper": "#F2F2F2",
+   "bg": "#0C0C0C",
+   "display": "Inter",
+   "ui": "Inter",
+   "serif": "Playfair Display"
+  }
+ },
+ "lifestyle": {
+  "_descricao": "Lifestyle editorial: edição quieta e elegante — gancho gigante que se EMPILHA palavra por palavra no terço de cima, legenda de UMA palavra pequena em serifa, rótulos creme em dupla sans + manuscrita no espaço livre (nunca no rosto), card de documento como prova; jump cuts com reenquadre sutil, cor natural quente, voz quase sozinha e sem efeitos. Educadoras, mentoras, estética, nutrição, bem-estar.",
+  "cortes": {
+   "pausa_max": 0.34,
+   "folga_antes": 0.07,
+   "folga_depois": 0.12,
+   "ar_frases": 0.12
+  },
+  "legendas": {
+   "layout": "micro",
+   "palavras": 1,
+   "max_car": 16,
+   "caixa": "frase",
+   "fonte": "EB Garamond",
+   "peso": 500,
+   "tamanho": 0.031,
+   "cor": "#FFFFFF",
+   "destaque": "#FFFFFF",
+   "contorno": 0.0,
+   "sombra": 0.0,
+   "animacao": "fade",
+   "y": 0.68,
+   "enfase_cor": false,
+   "halo": true,
+   "desvia_rosto": true
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.08
+   ],
+   "punch": 0.0,
+   "punch_intervalo": 99,
+   "push": 0.02,
+   "suavidade": 0.7,
+   "punch_modo": "enfase",
+   "punch_alterna": false
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -30,
+   "sfx": "nenhum",
+   "sfx_por_30s": 0,
+   "trilha_estilo": "piano"
+  },
+  "cor": {
+   "preset": "quente"
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    5,
+    10
+   ],
+   "rosto_entre": 1.5,
+   "look": "bold"
+  },
+  "broll": {
+   "cada_s": [
+    8,
+    14
+   ],
+   "dur": [
+    1.5,
+    2.6
+   ],
+   "kenburns": 0.04
+  },
+  "transicao": "corte",
+  "ritmo": {
+   "mudanca": [
+    3,
+    6
+   ],
+   "parado_max": 6.5,
+   "fim_max": 2.0,
+   "ppm": [
+    150,
+    190
+   ]
+  },
+  "juncoes": [
+   "corte",
+   "fade"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "empilha",
+     "rotulo"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "rotulo",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "rotulo",
+     "doc"
+    ]
+   },
+   "numero": {
+    "usa": [
+     "rotulo",
+     "numero"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto",
+     "rotulo"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "doc",
+     "rotulo"
+    ]
+   },
+   "fim": {
+    "usa": [
+     "rotulo",
+     "rosto",
+     "cta"
+    ]
+   }
+  },
+  "marca_padrao": {
+   "accent": "#F3ECB8",
+   "creme": "#F3ECB8",
+   "ink": "#1D1D1F",
+   "paper": "#FFFFFF",
+   "bg": "#1D1D1F",
+   "display": "Manrope",
+   "ui": "Manrope",
+   "serif": "EB Garamond",
+   "script": "Great Vibes"
+  }
+ },
+ "entrevista": {
+  "_descricao": "Entrevista cinematográfica: luz de cinema, legenda pequena de grotesca apertada que entra com fade e ESCALONA (palavra-chave grande, resto pequeno deslocado), CARTELAS de respiro (tela lisa cinza ou preta com a fala escrita) nas frases que importam, 2 ângulos alternando, cama de trilha grave contínua, acento só na volta da cartela e fim em fade para o preto. Autoridade, opinião, negócios, advogados, consultores.",
+  "cortes": {
+   "pausa_max": 0.38,
+   "folga_antes": 0.08,
+   "folga_depois": 0.14,
+   "ar_frases": 0.14
+  },
+  "legendas": {
+   "layout": "escada",
+   "palavras": 3,
+   "max_car": 22,
+   "caixa": "frase",
+   "fonte": "Inter Tight",
+   "peso": 500,
+   "tamanho": 0.048,
+   "escala_pequena": 0.62,
+   "tracking": 2.5,
+   "cor": "#FFFFFF",
+   "destaque": "#FFFFFF",
+   "contorno": 0.0,
+   "sombra": 0.0,
+   "animacao": "fade",
+   "halo": true,
+   "y": 0.62,
+   "enfase_cor": false,
+   "desvia_rosto": true
+  },
+  "camera": {
+   "zoom_alterna": [
+    1.0,
+    1.18
+   ],
+   "alterna_x": 0.06,
+   "punch": 0.14,
+   "punch_intervalo": 3.2,
+   "push": 0.025,
+   "suavidade": 0.8,
+   "punch_modo": "tonicas",
+   "punch_alterna": true,
+   "punch_rampa": 0.04
+  },
+  "som": {
+   "lufs": -14,
+   "musica_db": -24,
+   "duck_db": 6,
+   "sfx": "discreto",
+   "sfx_por_30s": 3,
+   "trilha_estilo": "cinematic"
+  },
+  "cor": {
+   "preset": "cinema",
+   "grao": 0.02
+  },
+  "motion": {
+   "densidade": "pontual",
+   "por_minuto": [
+    2,
+    6
+   ],
+   "rosto_entre": 2.0,
+   "look": "bold"
+  },
+  "broll": {
+   "cada_s": [
+    10,
+    16
+   ],
+   "dur": [
+    1.5,
+    3.0
+   ],
+   "kenburns": 0.04
+  },
+  "transicao": "corte",
+  "fim": {
+   "fade_preto": 1.2
+  },
+  "ritmo": {
+   "mudanca": [
+    2,
+    4
+   ],
+   "parado_max": 4.5,
+   "fim_max": 2.5,
+   "ppm": [
+    140,
+    180
+   ]
+  },
+  "juncoes": [
+   "corte"
+  ],
+  "batidas": {
+   "gancho": {
+    "usa": [
+     "cartela",
+     "rosto"
+    ]
+   },
+   "virada": {
+    "usa": [
+     "cartela",
+     "rosto"
+    ]
+   },
+   "item": {
+    "usa": [
+     "rosto",
+     "cartela"
+    ]
+   },
+   "numero": {
+    "usa": [
+     "cartela",
+     "rosto"
+    ]
+   },
+   "ponto": {
+    "usa": [
+     "rosto"
+    ]
+   },
+   "prova": {
+    "usa": [
+     "cartela",
+     "recorte"
+    ]
+   },
+   "fim": {
+    "usa": [
+     "cartela",
+     "rosto"
+    ]
+   }
+  },
+  "marca_padrao": {
+   "accent": "#FFFFFF",
+   "ink": "#161617",
+   "paper": "#F2F2F2",
+   "bg": "#141416",
+   "display": "Inter Tight",
+   "ui": "Inter Tight"
+  }
+ }
+}

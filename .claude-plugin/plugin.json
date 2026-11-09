@@ -1,0 +1,40 @@
+{
+  "name": "orbe-video",
+  "version": "1.6.0",
+  "description": "Vídeo da Orbe: edita-video (edição de vídeo gravado com perguntas fixas, galeria de estilos, cortes, legendas animadas, B-roll com licença, motion, SFX e QA medido; estilos de dinâmico a podcast P&B, lifestyle e entrevista, variações de teste, lista de planos, edit cinematográfico de carro/produto/evento na batida) + motion-studio (motion graphics em código, 23 estilos). Premiere, Final Cut, DaVinci, CapCut e celular.",
+  "author": {
+    "name": "Orbe Agência"
+  },
+  "keywords": [
+    "capcut",
+    "davinci",
+    "documentario",
+    "edicao",
+    "fcpxml",
+    "final-cut",
+    "galeria",
+    "legendas",
+    "minimal",
+    "motion",
+    "plano",
+    "podcast",
+    "premiere",
+    "premium",
+    "reels",
+    "ritmo",
+    "sfx",
+    "talking-head",
+    "trial-reels",
+    "variacoes",
+    "video",
+    "lifestyle",
+    "entrevista",
+    "decupagem",
+    "lista-de-planos",
+    "cinema",
+    "carros",
+    "aftermovie",
+    "edit-cinema",
+    "beat-sync"
+  ]
+}

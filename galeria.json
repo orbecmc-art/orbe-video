@@ -1,0 +1,5 @@
+{
+  "url": "https://claude.ai/artifact/789vb2Qmw5cRbTrC7Xwu3r",
+  "descricao": "Galeria de estilos Orbe: o MESMO vídeo bruto editado em cada estilo de edição (minimal premium, dossiê, podcast P&B, lifestyle, entrevista, dinâmico, clínica premium, educativo, luxo, varejo), com som, comparação lado a lado e o bruto; 23 estilos de motion; e a aba Edits de carro e cinema (cinema lento, ritual, vire o celular, aftermovie) com as referências estudadas. Use o link na pergunta de estilo.",
+  "atualizar": "A galeria inteira vai no plugin, na pasta galeria/ (index.html, vídeos, gerar.py). Quem não abre este link (é privado da conta da Orbe até ser compartilhado): publique a própria cópia — Artifact com file_path=galeria/index.html e files={'videos/<arquivo>': 'galeria/videos/<arquivo>'}. Atualizar: edita-video/scripts/vitrine.py <projeto> → python3 galeria/gerar.py --vitrine <projeto>/entregas/vitrine → republique no MESMO link (url)."
+}

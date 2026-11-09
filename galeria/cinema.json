@@ -1,0 +1,49 @@
+{
+ "referencias": [
+  {
+   "handle": "@h.vzls",
+   "titulo": "911 Turbo S no outono",
+   "url": "https://www.instagram.com/p/DeMmOMFuJIK/",
+   "receita": "cinema-lento",
+   "ensina": "Planos longos cortando nos tempos fortes, câmera lenta e contínua, cor de outono."
+  },
+  {
+   "handle": "@shotbykinetic",
+   "titulo": "BMW M3 E92",
+   "url": "https://www.instagram.com/p/DdGgrfNJiZ7/",
+   "receita": "vire-o-celular",
+   "ensina": "16:9 girado dentro do 9:16, grão de filme, legenda de máquina de escrever, cartela preta antes da batida."
+  },
+  {
+   "handle": "@loris.cataldo",
+   "titulo": "Restomod nos Alpes",
+   "url": "https://www.instagram.com/p/Deo2Fc0KJbr/",
+   "receita": "ritual",
+   "ensina": "O ritual antes de sair em cortes que aceleram (0,8 → 0,5 s); a estrada entra quando a batida cai."
+  },
+  {
+   "handle": "@f1rstmotors",
+   "titulo": "ASMR Ferrari 288 GTO",
+   "url": "https://www.instagram.com/p/DfHwbPRMMqD/",
+   "receita": "asmr",
+   "ensina": "Sem trilha: só o som real (porta, chave, ronco) com o corte no som; volta de detalhes; marca da loja no fim.",
+   "obs": "Pede áudio limpo do carro, gravado perto (porta, chave, ronco)."
+  }
+ ],
+ "itens": [
+  {
+   "id": "aftermovie",
+   "nome": "Aftermovie de evento",
+   "material": "11 takes de celular · Exotic Experience",
+   "chamada": "Takes do evento na batida: palco com título, público, os carros na queda com câmera lenta, fecha no palco e na marca.",
+   "bom": "evento, inauguração, encontro de clientes, feira",
+   "muda": {
+    "Ritmo": "2 → 1 batida no build, 2 na queda (124 bpm)",
+    "Câmera": "rampa de velocidade nos takes de 60 qps",
+    "Cor": "outono: quente",
+    "Som": "trilha eletrônica + público baixo + efeitos nas transições"
+   },
+   "ref": null
+  }
+ ]
+}

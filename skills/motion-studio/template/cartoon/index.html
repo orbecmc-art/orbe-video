@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Episódio</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{margin:0;background:#0d0d0c;overflow:hidden} canvas{display:block}
+  body:not(.render) canvas{max-height:100vh;max-width:100vw;margin:auto;}
+  #hud{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;padding:8px 12px;font:12px ui-monospace,monospace;color:#ddd;background:rgba(0,0,0,.6)}
+  #hud input{flex:1} body.render #hud{display:none}
+</style>
+<script src="lib/motion.js"></script>
+<script src="lib/recorder.js"></script><!-- ?player=1 (ou bundle): player com Play/Gravar; ignorado no render -->
+<script src="lib/rig.js"></script>
+<script src="lib/fx.js"></script>
+<script src="data.js"></script><!-- GERADO de scenes.json + hero/hero.json + audio/*.json (scripts sincronizam sozinhos); carrega scenes/NN.js -->
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><button id="pp">❚❚</button><input id="sc" type="range" min="0" step="0.001"><span id="tt"></span></div>
+<script>
+/* ═══════════════════════════════════ SÉRIE / PERSONAGEM ═══════════════════════════════════
+   Contrato de render igual ao resto da skill (seek(t) puro, nada de timers/random sem semente).
+   ORDEM: voz → tempo → animação. `python3 scripts/voice.py` escreve a duração real de cada cena em scenes.json,
+   audio/words.json (legendas), audio/mouth.json (bocas) e audio/loud.json (ênfases). Este arquivo só LÊ.
+   Cada cena vive em scenes/NN.js (SCENE['NN'] = { draw, keys, cues }) → "3, câmera mais perto" mexe só na 03.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+const Q = new URLSearchParams(location.search);
+const RENDER = Q.has('render') || navigator.webdriver;
+if (RENDER) document.body.classList.add('render');
+const S = window.SCENES, P = S.palette, HERO = window.HERO, WORDS = window.WORDS || [], VOICE = window.VOICE;
+const W = +Q.get('w') || 1080, H = +Q.get('h') || 1920;
+const FPS = S.fps || 30;
+let acc = 0; for (const sc of S.scenes) { if (sc.start == null) sc.start = acc; sc.duration_sec = sc.duration_sec || sc.min_sec || 4; acc = sc.start + sc.duration_sec; }
+const DURATION = S.duration || acc;
+Object.assign(window, { DURATION, FPS });
+const c = document.getElementById('c'); c.width = W; c.height = H;
+const g = c.getContext('2d', { willReadFrequently: true });
+const L = M.layout(W, H), u = L.u;
+// zonas seguras do Reels/TikTok/Shorts: o app cobre o topo (~120 px) e a base (~320 px) — nada importante ali
+// trilho direito (~120 px) = botões de curtir/comentar/compartilhar do app: nada de texto ali
+const SAFE = { top: Math.max(L.safe.top, 120 * u), bottom: Math.min(L.safe.bottom, H - 320 * u), left: L.safe.left, right: Math.min(L.safe.right, W - 120 * u) };
+// PALCO: os pés do herói pisam em FLOOR; as legendas moram ABAIXO do chão (CAPTION_Y), nunca em cima do corpo
+const FLOOR = SAFE.bottom - 80 * u, CAPTION_Y = Math.min(H - 330 * u, SAFE.bottom + 30 * u);
+const DISPLAY = `"${(S.captions && S.captions.font) || 'Inter'}","Inter",system-ui,sans-serif`;
+const FONTS = [`900 100px ${DISPLAY}`, `800 100px ${DISPLAY}`, `600 100px ${DISPLAY}`];
+window.ready = Promise.all(FONTS.map((f) => document.fonts.load(f)));
+const sceneAt = (t) => { let k = 0; for (let i = 0; i < S.scenes.length; i++) if (t >= S.scenes[i].start) k = i; return k; };
+const wordsOf = (sc) => WORDS.filter((w) => w.scene === sc.id);
+const wordTime = (sc, re) => { const w = wordsOf(sc).find((x) => re.test(x.w)); return w ? w.s : null; };   // "o checklist marca quando ele FALA a palavra"
+
+// ── trilha do personagem: pose/emoção de cada cena + chaves extras da cena (SCENE[id].keys, em tempo local) ──
+function heroTrack() {
+  const tr = [];
+  for (const sc of S.scenes) {
+    tr.push({ t: sc.start - 0.05, pose: sc.hero_pose || 'idle', emotion: sc.emotion || 'neutral', look: sc.look || [0, 0] });
+    const mod = window.SCENE[sc.id]; for (const k of (mod && mod.keys) || []) tr.push({ ...k, t: sc.start + k.at });
+  }
+  return tr.sort((a, b) => a.t - b.t);
+}
+const TRACK = heroTrack();
+const heroState = (t) => R.state(t, HERO, TRACK, VOICE);
+function drawHero(t, x, y, scale) { R.draw(g, HERO, heroState(t), x, y, scale); }
+
+// ── câmera por cena (do campo "camera" do roteiro) ──
+function camera(sc, lt) {
+  const p = lt / sc.duration_sec; let z = 1, dx = 0, dy = 0;
+  if (sc.camera === 'zoom_in') z = 1 + 0.15 * M.EASE.move(M.clamp(p));
+  if (sc.camera === 'pan_left') dx = -60 * u * M.EASE.move(M.clamp(p));
+  if (sc.camera === 'shake') { for (const w of wordsOf(sc).filter((w) => w.stress)) { const [a, b] = FX.shake(sc.start + lt, w.s, 14 * u, 9); dx += a; dy += b; } }
+  return { z, dx, dy };
+}
+
+// ── texto de tela (gancho/CTA): grande, entra com spring e overshoot, sempre dentro da zona segura ──
+function screenText(sc, lt) {
+  if (!sc.on_screen_text) return;
+  const size = M.fitSize(g, sc.on_screen_text, SAFE.right - SAFE.left, 130 * u, 900, DISPLAY);
+  M.kinetic(g, lt, sc.on_screen_text, { t0: sc.id === S.scenes[0].id ? -0.9 : 0.1, x: (SAFE.left + SAFE.right) / 2, y: SAFE.top + size * 1.25, size, family: DISPLAY, weight: 900,
+    color: P.light, tracking: -0.02, by: 'word', spread: 0.18, preset: 'playful', from: { y: 0.9, scale: 0.6, rot: 0.06 } });
+}
+
+// ── transição de saída de cada cena (6–9 frames): whip = chicote com borrão; cut = corte seco ──
+function transitionShift(t) {
+  const i = sceneAt(t), sc = S.scenes[i], nx = S.scenes[i + 1], pv = S.scenes[i - 1], d = 0.22;
+  if (nx && sc.transition === 'whip' && t > nx.start - d) return -M.EASE.exit((t - (nx.start - d)) / d) * W * 1.1;
+  if (pv && pv.transition === 'whip' && t < sc.start + d) return (1 - M.EASE.enter((t - sc.start) / d)) * W * 1.1;
+  return 0;
+}
+
+function draw(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = 'none';
+  const i = sceneAt(t), sc = S.scenes[i], lt = t - sc.start, mod = window.SCENE[sc.id];
+  g.fillStyle = P.bg; g.fillRect(0, 0, W, H);
+  const cam = camera(sc, lt), shift = transitionShift(t);
+  g.save(); g.translate(L.cx + cam.dx + shift, L.cy + cam.dy); g.scale(cam.z, cam.z); g.translate(-L.cx, -L.cy);
+  g.fillStyle = P.bg2; g.globalAlpha = 0.55; g.fillRect(-W, FLOOR + 6 * u, W * 3, H); g.globalAlpha = 1;   // chão
+  const ctx = { W, H, u, L, P, SAFE, FLOOR, sc, lt, t, words: wordsOf(sc), wordTime: (re) => wordTime(sc, re), drawHero, heroState, DISPLAY };
+  if (mod && mod.draw) mod.draw(g, lt, ctx); else { g.fillStyle = P.light; g.font = `700 ${60 * u}px ${DISPLAY}`; g.textAlign = 'center'; g.fillText(`cena ${sc.id} sem scenes/${sc.id}.js`, L.cx, L.cy); }
+  g.restore();
+  screenText(sc, lt);
+  FX.captions(g, t, WORDS, { y: CAPTION_Y, size: (S.captions && S.captions.size || 76) * u, font: DISPLAY, per: (S.captions && S.captions.per) || 3,
+    accent: P.accent, outline: P.ink, outlineW: 14 * u, maxW: SAFE.right - SAFE.left - 40 * u, x: (SAFE.left + SAFE.right) / 2 });
+  M.grain(g, W, H, t, 0.035);
+  if (Q.has('debug')) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(16, 16, 640 * u, 56 * u); g.fillStyle = '#fff'; g.font = `600 ${28 * u}px ui-monospace,monospace`;
+    g.fillText(`f${String(Math.round(t * FPS)).padStart(4, '0')} · ${t.toFixed(2)}s · cena ${sc.id} · boca ${heroState(t).mouth}`, 30, 16 + 38 * u); }
+}
+window.seek = (t) => { if (Q.has('sheet')) { R.sheet(g, HERO, W, H, P.light); return true; } draw(M.clamp(t, 0, DURATION - 1e-4)); return true; };
+window.renderAt = window.seek;
+
+// ── som: SFX do roteiro no início de cada cena + cues próprios da cena (tempo local) ──
+window.CUES = S.scenes.flatMap((sc) => {
+  const mod = window.SCENE[sc.id], out = [];
+  if (sc.sfx && sc.sfx !== 'none') out.push({ t: sc.start + (sc.sfx === 'whoosh' ? 0 : 0.05), type: sc.sfx, gain: 0.6 });
+  for (const q of (mod && mod.cues) || []) { const at = q.word ? wordTime(sc, q.word) : sc.start + q.at; if (at != null) out.push({ ...q, t: at + (q.off || 0), word: undefined }); }
+  return out;
+});
+// ── board: uma linha por cena numerada ──
+window.SHOTS = S.scenes.map((sc) => ({ from: sc.start, to: sc.start + sc.duration_sec, key: sc.start + sc.duration_sec * 0.62, name: `${sc.id} · ${sc.hero_pose}/${sc.emotion}`,
+  read: sc.voiceover, text: sc.on_screen_text || '(legendas)', sfx: sc.sfx, out: sc.transition || 'cut' }));
+// ── checagens: lip sync, primeiro frame "alto", ritmo de cena, legendas na zona segura ──
+window.CHECKS = [
+  { t: 0, name: 'frame 0 já tem gancho na tela e personagem em pose', test: () => !!S.scenes[0].on_screen_text || 'cena 01 sem texto de gancho' },
+  ...S.scenes.map((sc) => ({ t: sc.start, name: `cena ${sc.id} dura 3–6 s`, test: () => (sc.duration_sec >= 2.5 && sc.duration_sec <= 6.5) || `${sc.duration_sec.toFixed(1)} s — divida ou junte` })),
+  ...WORDS.filter((w, i) => i % 3 === 1).map((w) => ({ t: (w.s + w.e) / 2, name: `boca aberta em "${w.w}"`, test: (t) => heroState(t).mouth !== 'X' || 'boca em repouso no meio da palavra' })),
+  { t: DURATION - 0.1, name: 'boca fechada depois da última fala', test: (t) => heroState(t).mouth === 'X' || `boca ${heroState(t).mouth}` },
+];
+window.PROBES = { 'boca aberta (0/1)': (t) => (heroState(t).mouth === 'X' || heroState(t).mouth === 'A' ? 0 : 1), 'pulo': (t) => heroState(t).jump, 'cotovelo dir.': (t) => heroState(t).er };
+
+if (Q.has('t')) window.ready.then(() => window.seek(+Q.get('t') || 0));
+else if (!RENDER && !window.__PLAYER) {
+  const sc = document.getElementById('sc'), pp = document.getElementById('pp'), tt = document.getElementById('tt');
+  sc.max = DURATION; let playing = true, t0 = performance.now(), cur = 0;
+  const show = (t) => { cur = t; window.seek(t); sc.value = t; tt.textContent = `f ${Math.round(t * FPS)} · ${t.toFixed(2)}s · cena ${S.scenes[sceneAt(t)].id}`; };
+  window.ready.then(() => (function loop() { if (playing) show(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })());
+  const toggle = () => { playing = !playing; pp.textContent = playing ? '❚❚' : '▶'; t0 = performance.now() - cur * 1000; };
+  pp.onclick = toggle; sc.oninput = () => { playing = false; show(+sc.value); };
+  addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); toggle(); } if (e.code === 'ArrowRight') { playing = false; show(Math.min(DURATION, cur + 1 / FPS)); } if (e.code === 'ArrowLeft') { playing = false; show(Math.max(0, cur - 1 / FPS)); } });
+}
+</script>
+</body>
+</html>

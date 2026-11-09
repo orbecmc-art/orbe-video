@@ -1,0 +1,10 @@
+{
+  "name": "Léo",
+  "look": "cabelo em topete escuro, camiseta amarela com bolso verde-água, calça azul, tênis escuro",
+  "personality": "explica coisa complicada como quem conta segredo de amigo; se assusta fácil, comemora alto",
+  "signature": "Comenta que eu te mostro.",
+  "skin": "#F2C6A0", "hair": "#3A2A2F", "hairStyle": "tuft",
+  "shirt": "#FFB547", "pants": "#2F5D8A", "shoes": "#1E1B2E", "accent": "#4ECDC4",
+  "outline": "#1E1B2E", "mouthColor": "#3B1F2B", "detail": true,
+  "locked": "proporções, cores e topete NÃO mudam entre episódios; mude só poses, emoções e figurino de cena"
+}

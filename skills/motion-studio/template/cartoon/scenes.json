@@ -1,0 +1,25 @@
+{
+  "title": "Um CRM é um caderno que nunca esquece",
+  "series": "Explica em 15s",
+  "lang": "pt",
+  "fps": 30,
+  "format": "9x16",
+  "voice": { "model": "models/pt_BR-faber-medium.onnx", "rate": 1.05 },
+  "palette": { "bg": "#1E1B2E", "bg2": "#2A2540", "accent": "#FFB547", "light": "#F4EDE4", "second": "#4ECDC4", "danger": "#FF5A5F", "ink": "#1E1B2E" },
+  "captions": { "font": "Inter", "size": 76, "per": 3 },
+  "music": { "style": "warm", "bpm": 110, "db": -19 },
+  "scenes": [
+    { "id": "01", "min_sec": 3, "voiceover": "Sabe por que você perde cliente no WhatsApp?",
+      "visual": "Léo surpreso no centro; celular gigante atrás vibrando com o contador de mensagens subindo",
+      "camera": "zoom_in", "hero_pose": "surprised", "emotion": "surprised", "sfx": "whoosh", "on_screen_text": "PERDE CLIENTE?", "transition": "whip" },
+    { "id": "02", "min_sec": 3, "voiceover": "Porque a conversa some no meio de cem mensagens.",
+      "visual": "balões de mensagem caem e empilham em cima do Léo; ele entra em pânico e sua",
+      "camera": "shake", "hero_pose": "panic", "emotion": "panic", "sfx": "pop", "transition": "cut" },
+    { "id": "03", "min_sec": 3, "voiceover": "Um CRM é um caderno que nunca esquece: anota, lembra e cobra.",
+      "visual": "um caderno abre; o checklist marca ANOTA, LEMBRA e COBRA no instante em que o Léo fala cada palavra",
+      "camera": "pan_left", "hero_pose": "point", "emotion": "happy", "sfx": "ding", "transition": "whip" },
+    { "id": "04", "min_sec": 3, "voiceover": "Comenta CRM que eu te mostro o nosso.",
+      "visual": "carimbo FECHOU! com impacto em camadas; Léo faz joinha; o celular volta pequeno e calmo (rima com a abertura)",
+      "camera": "static", "hero_pose": "thumbs_up", "emotion": "happy", "sfx": "impact", "on_screen_text": "COMENTA \"CRM\"", "transition": "cut" }
+  ]
+}

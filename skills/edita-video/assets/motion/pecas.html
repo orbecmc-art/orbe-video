@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>edita-video · peças de motion</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}
+body:not(.render){background:#2b2b2b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='20' height='20' fill='%23333'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23333'/%3E%3C/svg%3E")}</style>
+</head><body><canvas id="c"></canvas>
+<script src="lib/motion.js"></script>
+<script src="pecas.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   PEÇAS DE MOTION do edita-video — renderizadas pelo motion-studio (render.mjs) com ?peca=<id>.
+   Cada item do mapa (tipo "motion") vira UM render: sobreposto → ProRes 4444 com alfa; tela_cheia/split → opaco.
+   Contrato motion-studio: seek(t) puro, DURATION/FPS, CUES (som com pico no evento), SHOTS, VALIDATE.
+   Ofício (números de oficio.md + LeiteZ): entrada ~0,5 s com spring ζ≈0,8; texto por máscara com cascata 0,07 s;
+   destaque varre em 0,25 s; tudo "vive" (deriva de 2%); saída em 8 quadros ease-in; nada linear; nunca fonte na tela.
+   ════════════════════════════════════════════════════════════════════════════ */
+const Q = new URLSearchParams(location.search);
+if (Q.has('render') || navigator.webdriver) document.body.classList.add('render');
+const D = window.PECAS, ID = Q.get('peca') || Object.keys(D.itens)[0], PC = D.itens[ID], MK = D.marca;
+const W = +Q.get('w') || D.w, H = +Q.get('h') || D.h, u = Math.min(W, H) / 1080;
+const c = document.getElementById('c'); c.width = W; c.height = H; c.style.width = W + 'px'; c.style.height = H + 'px';
+const g = c.getContext('2d', { willReadFrequently: true });
+const FPS = D.fps, DUR = PC.dur, EX = Math.min(0.27, DUR * 0.2);
+window.FPS = FPS; window.DURATION = DUR;
+const OPACO = PC.modo === 'tela_cheia' || PC.modo === 'split' || PC.modo === 'janela';   // janela: fundo inteiro, câmera vira cartão (compor)
+const LOOK = PC.look || D.look || 'bold';                 // bold (texto forte com sombra) · card (placa clara)
+const DISP = MK.display || 'Montserrat', UI = MK.ui || 'Inter';
+const C = { ink: MK.ink || '#141413', paper: MK.paper || '#FFFFFF', accent: MK.accent || '#FFD43B', bg: MK.bg || '#141413', mute: MK.mute || '#8A867D', onAccent: MK.onAccent || '#141413' };
+const PR = PC.params || {};
+// área útil: tela inteira, ou metade de cima no split
+const AREA = PC.modo === 'split' ? { x: 0, y: 0, w: W, h: H / 2 } : { x: 0, y: 0, w: W, h: H };
+const POSY = { topo: 0.215, centro: 0.46, baixo: 0.745, 'meio-baixo': 0.62 }[PC.posicao || 'centro'] ?? 0.46;
+const CY = PC.modo === 'split' ? AREA.h * 0.5 : PC.modo === 'janela' ? H * 0.185 : PC.modo === 'tela_cheia' ? H * (PC.cy ?? 0.46) : H * (PC.cy ?? POSY);
+const VAGA = (PC.vaga || (PC.modo === 'tela_cheia' ? 0.6 : 0.3)) * H;   // altura livre para a peça (posicao "auto": acima da cabeça ou no peito)
+const SAFE_W = W * 0.84;
+const E = M.EASE, clamp = M.clamp;
+
+// ── utilidades ──
+const life = (t) => 1 + (OPACO && (PC.look || D.look) === 'papel' ? 0.045 : 0.02) * M.ease.inOutSine(clamp(t / Math.max(1, DUR)));   // deriva: nada fica congelado
+const sair = (t) => E.exit(clamp((t - (DUR - EX)) / EX));                                    // 0 → 1 nos últimos 8 quadros
+const fade6 = (t, t0) => M.ease.outQuad(clamp((t - t0) / 0.2));
+function sombraV(on = true) { if (on && !OPACO) { g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 22 * u; g.shadowOffsetY = 4 * u; } else { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; } }   // texto direto sobre o vídeo: sempre com sombra
+function sombra(on = true) { if (on && LOOK === 'bold' && !OPACO) { g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 22 * u; g.shadowOffsetY = 4 * u; } else { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; } }
+function placa(x, y, w, h, r, a = 1, cor = C.paper) {
+  g.save(); g.globalAlpha *= a; g.shadowColor = 'rgba(0,0,0,.22)'; g.shadowBlur = 40 * u; g.shadowOffsetY = 14 * u;
+  g.fillStyle = cor; M.rrect(g, x, y, w, h, r); g.fill(); g.restore();
+}
+// texto por máscara, palavra a palavra; devolve largura. destaque = palavra(s) que ganham marcador de acento
+function linhaMascara(t, t0, txt, x, y, size, weight, fam, cor, { align = 'center', dest = '', destT = null, stag = 0.07, forte = false } = {}) {
+  const sb = forte ? sombraV : sombra;
+  M.setFont(g, weight, size, fam); g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+  const ws = txt.split(/\s+/), sp = g.measureText(' ').width, wd = ws.map((w) => g.measureText(w).width);
+  const tot = wd.reduce((a, b) => a + b, 0) + sp * (ws.length - 1);
+  let xx = align === 'center' ? x - tot / 2 : align === 'right' ? x - tot : x;
+  const dset = new Set(dest.toLowerCase().split(/\s+/).filter(Boolean));
+  ws.forEach((w, i) => {
+    const p = M.springZ(t - t0 - i * stag, 0.82, 2.4);
+    if (p > 0.001) {
+      const isD = dset.has(w.toLowerCase().replace(/[^\p{L}\p{N}%$]/gu, '')) || dset.has(w.toLowerCase());
+      if (isD && destT != null) {        // marcador varre por trás da palavra
+        const q = E.enter(clamp((t - destT) / 0.25));
+        if (q > 0) { g.save(); sombra(false); g.fillStyle = C.accent; M.rrect(g, xx - 0.12 * size, y - 0.80 * size, (wd[i] + 0.24 * size) * q, 1.02 * size, 0.12 * size); g.fill(); g.restore(); }
+      }
+      g.save(); g.beginPath(); g.rect(xx - size, y - 1.05 * size, wd[i] + 2 * size, 1.38 * size); g.clip();
+      g.fillStyle = isD && destT != null && t >= destT + 0.08 ? C.onAccent : cor;
+      sb(!(isD && destT != null && t >= destT)); g.fillText(w, xx, y + (1 - p) * 1.15 * size); g.restore();
+    }
+    xx += wd[i] + sp;
+  });
+  return tot;
+}
+// ── look "papel" (minimal premium): papel claro/escuro/azul com textura de fibra, cores foscas ──
+const ESCURO = (PR.fundo || (['grafico', 'linha'].includes(PC.peca) ? 'escuro' : 'claro')) !== 'claro';
+let _pap = null;
+function texPapel() {
+  if (_pap) return _pap;
+  const S = 512, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+  const cg = cv.getContext('2d'), id = cg.createImageData(S, S), r = M.rng(77);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const n = 0.5 * M.noise2(x / 46, y / 46) + 0.3 * M.noise2(x / 7, y / 90) + 0.2 * (r() * 2 - 1), v = 128 + n * 40, i = (y * S + x) * 4;
+    id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255;
+  }
+  cg.putImageData(id, 0, 0); _pap = cv; return cv;
+}
+function fundoPapel(x, y, w, h) {
+  const base = PR.fundo === 'azul' ? M.mixHex(C.accent, '#0E1420', 0.55) : ESCURO ? C.bg : C.paper;
+  g.fillStyle = base; g.fillRect(x, y, w, h);
+  g.save(); g.globalCompositeOperation = 'overlay'; g.globalAlpha = ESCURO ? 0.30 : 0.42; g.fillStyle = g.createPattern(texPapel(), 'repeat'); g.fillRect(x, y, w, h); g.restore();
+  M.vignette(g, w, h, ESCURO ? 0.5 : 0.16);
+}
+const tinta = () => (OPACO && LOOK === 'papel' && !ESCURO && PR.fundo !== 'azul' ? C.ink : OPACO ? C.paper : '#FFFFFF');   // cor do texto conforme o fundo
+const tintaSuave = () => (OPACO && LOOK === 'papel' && !ESCURO && PR.fundo !== 'azul' ? C.mute : 'rgba(255,255,255,.82)');
+const SERIFA = (w = 700) => 'italic ' + w;              // peso para M.setFont: serifa itálica da marca (display)
+function fundoOpaco(t) {
+  if (!OPACO) return;
+  if (PC.peca === 'cartela') { g.fillStyle = corCartela().bg; g.fillRect(0, 0, W, H); M.grain(g, W, H, t, 0.018); return; }
+  if (LOOK === 'dossie') { fundoDossie(t); return; }
+  if (LOOK === 'papel') {      // câmera empurra devagar (3%) o papel inteiro: nada fica congelado na tela
+    const k = 1 + 0.03 * M.ease.inOutSine(clamp(t / Math.max(1, DUR)));
+    g.save(); g.translate(AREA.w / 2, AREA.h / 2); g.scale(k, k); g.translate(-AREA.w / 2, -AREA.h / 2); fundoPapel(AREA.x - 4, AREA.y - 4, AREA.w + 8, AREA.h + 8); g.restore();
+    M.grain(g, AREA.w, AREA.h, t, 0.03, 12); return;
+  }
+  const gr = g.createLinearGradient(0, 0, 0, AREA.h); gr.addColorStop(0, C.bg); gr.addColorStop(1, M.mixHex(C.bg, '#000000', 0.25));
+  g.fillStyle = gr; g.fillRect(AREA.x, AREA.y, AREA.w, AREA.h);
+  M.vignette(g, AREA.w, AREA.h, 0.25); M.grain(g, AREA.w, AREA.h, t, 0.035);
+}
+const corTexto = () => (OPACO ? tinta() : LOOK === 'card' ? C.ink : '#FFFFFF');   // texto SOBRE PLACA no look card
+const sobreVideo = () => (OPACO ? tinta() : '#FFFFFF');                           // texto direto sobre o vídeo (qualquer look)
+
+// ════════════════════ PEÇAS ════════════════════
+const PECAS = {};
+const CUES = [];   // {t, type, gain}
+
+// TÍTULO / GANCHO — linha forte + linha de apoio; palavra de destaque com marcador de acento
+PECAS.titulo = (t) => {
+  const L1 = (PR.linhas || [PC.texto || ''])[0] || '', L2 = (PR.linhas || [])[1] || PR.sub || '';
+  const s1 = M.fitSize(g, L1, SAFE_W, Math.min(150, PR.tamanho || 128) * u, 900, DISP, 56 * u);
+  const s2 = L2 ? M.fitSize(g, L2, SAFE_W, 46 * u, 600, UI, 30 * u) : 0;
+  const hT = s1 * 1.1 + (L2 ? s2 * 1.6 : 0), y1 = CY - hT / 2 + s1 * 0.85;
+  if (LOOK === 'card' && !OPACO) {
+    M.setFont(g, 900, s1, DISP); const w1 = g.measureText(L1).width; M.setFont(g, 600, s2, UI); const w2 = L2 ? g.measureText(L2).width : 0;
+    const pw = Math.max(w1, w2) + 96 * u, ph = hT + 84 * u, k = M.springZ(t, 0.85, 2.2);
+    g.save(); g.translate(W / 2, CY); g.scale(0.94 + 0.06 * k, 0.94 + 0.06 * k); g.translate(-W / 2, -CY);
+    placa(W / 2 - pw / 2, CY - ph / 2, pw, ph, 28 * u, fade6(t, 0)); g.restore();
+  }
+  linhaMascara(t, 0.06, L1, W / 2, y1, s1, 900, DISP, corTexto(), { dest: PR.destaque || '', destT: 0.42 });
+  if (L2) { g.save(); g.globalAlpha *= fade6(t, 0.3); linhaMascara(t, 0.3, L2, W / 2, y1 + s1 * 0.42 + s2 * 1.25, s2, 600, UI, OPACO ? M.mixHex(C.paper, C.bg, 0.25) : corTexto(), { stag: 0.04 }); g.restore(); }
+};
+CUES.titulo = () => [{ t: 0.04, type: 'whoosh', gain: 0.7 }, ...(PR.destaque ? [{ t: 0.44, type: 'swish', gain: 0.6 }] : [])];
+
+// PALAVRA — uma palavra enorme (ênfase), assenta com leve overshoot; sublinhado de acento se desenha
+PECAS.palavra = (t) => {
+  const tx = PC.texto || PR.texto || '';
+  const s = M.fitSize(g, tx, SAFE_W, (PR.tamanho || 190) * u, 900, DISP, 70 * u);
+  const k = M.springZ(t, 0.58, 2.6), a = fade6(t, 0);
+  g.save(); g.globalAlpha *= a; g.translate(W / 2, CY); const sc = 0.72 + 0.28 * k; g.scale(sc, sc);
+  M.setFont(g, 900, s, DISP); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.letterSpacing = ((1 - k) * 0.06 * s).toFixed(1) + 'px';
+  sombraV(); g.fillStyle = sobreVideo(); g.fillText(tx, 0, s * 0.35); g.letterSpacing = '0px';
+  const w = g.measureText(tx).width, q = E.enter(clamp((t - 0.28) / 0.3));
+  sombra(false); g.fillStyle = C.accent; M.rrect(g, -w / 2, s * 0.5, w * q, 0.09 * s, 0.045 * s); g.fill();
+  g.restore();
+  if (PR.sub) { g.save(); g.globalAlpha *= fade6(t, 0.35); linhaMascara(t, 0.35, PR.sub, W / 2, CY + s * 0.95 + 40 * u, 44 * u, 600, UI, sobreVideo(), { stag: 0.04, forte: true }); g.restore(); }
+};
+CUES.palavra = () => [{ t: 0.1, type: 'thump', gain: 0.8 }, { t: 0.3, type: 'swish', gain: 0.4 }];
+
+// NÚMERO — contador que assenta (heavy), prefixo/sufixo, rótulo; barra de acento cresce
+PECAS.numero = (t) => {
+  const v = +PR.valor || 0, dec = PR.decimais || 0, T0 = 0.05, TC = 0.9;
+  const p = M.spring(clamp(t - T0, 0, 9) * (1.6 / TC), 120, 24);                    // assenta em ~TC
+  const conta = dec > 0 || Math.abs(v) >= 10 || PR.contar === true;               // 0→1 não conta: "R$ 0 milhão" lê errado
+  const cur = !conta || M.frameT(t) >= T0 + TC + 0.4 ? v : v * Math.min(1, p);
+  const fmt = (x) => (PR.prefixo || '') + x.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + (PR.sufixo || '');
+  const full = fmt(v), s = M.fitSize(g, full, SAFE_W, (PR.tamanho || 230) * u, 900, DISP, 80 * u);
+  const a = fade6(t, 0), k = M.springZ(t, 0.7, 2.2);
+  g.save(); g.globalAlpha *= a; g.translate(W / 2, CY + (1 - k) * 40 * u);
+  M.setFont(g, 900, s, DISP); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; sombraV(); g.fillStyle = sobreVideo();
+  g.fillText(fmt(dec ? cur : Math.round(cur)), 0, s * 0.3);
+  const w = g.measureText(full).width, q = E.premium(clamp((t - 0.25) / 0.7));
+  sombra(false); g.fillStyle = C.accent; M.rrect(g, -w / 2, s * 0.42, w * q, 0.07 * s, 0.035 * s); g.fill(); g.restore();
+  if (PR.rotulo) { g.save(); g.globalAlpha *= fade6(t, 0.5); linhaMascara(t, 0.5, PR.rotulo, W / 2, CY + s * 0.3 + 0.5 * s + 50 * u, 46 * u, 700, UI, sobreVideo(), { stag: 0.04, forte: true }); g.restore(); }
+};
+CUES.numero = () => [{ t: 0.05, type: 'swish', gain: 0.5 }, { t: 0.92, type: 'ding', gain: 0.7 }];
+
+// LISTA — selo numerado (pop), texto entra do selo, pontos de progresso (n de total)
+PECAS.lista = (t) => {
+  const n = PR.n || 1, tot = PR.total || 0, tx = PC.texto || PR.texto || '';
+  const s = M.fitSize(g, tx, SAFE_W - 170 * u, (PR.tamanho || 92) * u, 900, DISP, 52 * u);
+  M.setFont(g, 900, s, DISP); const tw = g.measureText(tx).width, R = 62 * u, gap = 30 * u, tot_w = 2 * R + gap + tw;
+  const x0 = W / 2 - tot_w / 2, kb = M.springZ(t, 0.55, 2.8);
+  if (LOOK === 'card' && !OPACO) placa(x0 - 34 * u, CY - R - 30 * u, tot_w + 68 * u, 2 * R + 60 * u + (tot ? 52 * u : 0), 30 * u, fade6(t, 0));
+  g.save(); g.translate(x0 + R, CY); g.scale(kb, kb); sombra(); g.fillStyle = C.accent; g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
+  sombra(false); M.setFont(g, 900, 74 * u, DISP); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = C.onAccent; g.fillText(String(n), 0, 4 * u); g.restore();
+  // texto revela da esquerda (atrás do selo) para a direita
+  const p = M.springZ(t - 0.1, 0.85, 2.2);
+  g.save(); g.beginPath(); g.rect(x0 + 2 * R + gap * 0.5, CY - s, tw + gap + 20 * u, 2 * s); g.clip();
+  M.setFont(g, 900, s, DISP); g.textAlign = 'left'; g.textBaseline = 'middle'; sombra(); g.fillStyle = corTexto();
+  g.fillText(tx, x0 + 2 * R + gap - (1 - p) * (tw * 0.35), CY + 4 * u); g.restore();
+  if (tot) {   // progresso: o atual enche de acento
+    const dr = 12 * u, sp = 42 * u, xs = W / 2 - ((tot - 1) * sp) / 2, yd = CY + R + 50 * u;
+    for (let i = 0; i < tot; i++) {
+      const on = i < n - 1 ? 1 : i === n - 1 ? E.enter(clamp((t - 0.35) / 0.2)) : 0;
+      g.save(); g.globalAlpha *= fade6(t, 0.2 + i * 0.04); sombra(false); g.beginPath(); g.arc(xs + i * sp, yd, dr * (1 + 0.25 * on), 0, 2 * Math.PI);
+      g.fillStyle = on > 0.5 ? C.accent : LOOK === 'card' && !OPACO ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.55)'; g.fill(); g.restore();
+    }
+  }
+};
+CUES.lista = () => [{ t: 0.03, type: 'pop', gain: 0.8 }, { t: 0.14, type: 'swish', gain: 0.45 }, ...(PR.total ? [{ t: 0.36, type: 'tick', gain: 0.5 }] : [])];
+
+// LOWER THIRD — barra de acento cresce, nome por máscara, cargo depois; placa opcional
+PECAS.lower_third = (t) => {
+  const nome = PR.nome || PC.texto || '', cargo = PR.cargo || '';
+  const sN = M.fitSize(g, nome, W * 0.72, (PR.tamanho || 86) * u, 800, DISP, 56 * u), sC = cargo ? M.fitSize(g, cargo, W * 0.72, 46 * u, 600, UI, 30 * u) : 0;
+  M.setFont(g, 800, sN, DISP); const wN = g.measureText(nome).width; M.setFont(g, 600, sC, UI); const wC = cargo ? g.measureText(cargo).width : 0;
+  const pad = 30 * u, bw = 10 * u, hh = sN * 1.15 + (cargo ? sC * 1.45 : 0) + pad * 1.2, ww = Math.max(wN, wC) + pad * 2 + bw + 14 * u;
+  const x = W * 0.08, y = CY - hh / 2, k = E.enter(clamp(t / 0.3));
+  if (LOOK === 'card' || PR.placa) { g.save(); g.beginPath(); g.rect(x, y - 40 * u, ww * k + 2, hh + 80 * u); g.clip(); placa(x, y, ww, hh, 18 * u, 0.94); g.restore(); }
+  g.save(); sombra(false); g.fillStyle = C.accent; M.rrect(g, x + 0 * u, y + hh * (1 - k) / 2, bw, hh * k, bw / 2); g.fill(); g.restore();
+  const tx = x + bw + 26 * u, cor = LOOK === 'card' || PR.placa ? C.ink : '#FFFFFF';
+  linhaMascara(t, 0.12, nome, tx, y + pad * 0.6 + sN * 0.9, sN, 800, DISP, cor, { align: 'left', stag: 0.05 });
+  if (cargo) { g.save(); g.globalAlpha *= fade6(t, 0.3); linhaMascara(t, 0.3, cargo, tx, y + pad * 0.6 + sN * 1.15 + sC * 1.1, sC, 600, UI, LOOK === 'card' || PR.placa ? C.mute : 'rgba(255,255,255,.9)', { align: 'left', stag: 0.03 }); g.restore(); }
+};
+CUES.lower_third = () => [{ t: 0.02, type: 'swish', gain: 0.55 }, { t: 0.32, type: 'click', gain: 0.35 }];
+
+// CHECK — itens com ✓ (ou ✗) que se desenham um por vez
+PECAS.check = (t) => {
+  const its = PR.itens || [PC.texto || ''], ic = PR.icone || 'check', step = PR.intervalo || 0.38;
+  const s = Math.min(...its.map((x) => M.fitSize(g, x, SAFE_W - 120 * u, 66 * u, 800, DISP, 40 * u))), lh = s * 1.7;
+  const y0 = CY - ((its.length - 1) * lh) / 2;
+  M.setFont(g, 800, s, DISP); const mw = Math.max(...its.map((x) => g.measureText(x).width)), x0 = W / 2 - (mw + 100 * u) / 2;
+  if (LOOK === 'card' && !OPACO) {     // a placa cresce com os itens (não aparece vazia)
+    const kH = its.reduce((a, _, i) => a + M.springZ(t - (0.05 + i * step), 0.9, 2.4), 0);
+    placa(x0 - 40 * u, y0 - lh * 0.75, mw + 180 * u, Math.max(1, kH) * lh + lh * 0.3, 28 * u, fade6(t, 0));
+  }
+  its.forEach((x, i) => {
+    const t0 = 0.05 + i * step, R = s * 0.48, cx = x0 + R, kb = M.springZ(t - t0, 0.6, 2.6);
+    if (kb <= 0.001) return;
+    g.save(); g.translate(cx, y0 + i * lh); g.scale(kb, kb); sombra(); g.fillStyle = ic === 'x' ? '#E5484D' : C.accent; g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
+    sombra(false); g.strokeStyle = ic === 'x' ? '#FFFFFF' : C.onAccent; g.lineWidth = R * 0.22; g.lineCap = 'round'; g.lineJoin = 'round';
+    const q = E.enter(clamp((t - t0 - 0.08) / 0.22));
+    if (ic === 'x') { M.drawPartial(g, [[-R * 0.38, -R * 0.38], [R * 0.38, R * 0.38]], clamp(q * 2)); M.drawPartial(g, [[R * 0.38, -R * 0.38], [-R * 0.38, R * 0.38]], clamp(q * 2 - 1)); }
+    else M.drawPartial(g, [[-R * 0.45, 0], [-R * 0.12, R * 0.33], [R * 0.48, -R * 0.36]], q);
+    g.restore();
+    g.save(); g.globalAlpha *= fade6(t, t0 + 0.06); linhaMascara(t, t0 + 0.06, x, x0 + 2 * R + 26 * u, y0 + i * lh + s * 0.36, s, 800, DISP, corTexto(), { align: 'left', stag: 0.04 }); g.restore();
+  });
+};
+CUES.check = () => (PR.itens || [0]).map((_, i) => ({ t: 0.05 + i * (PR.intervalo || 0.38) + 0.1, type: 'tick', gain: 0.65 }));
+
+// CTA — balão de comentário com a palavra-chave em chip de acento, respira a cada 1,2 s
+PECAS.cta = (t) => {
+  const acao = PR.acao || 'COMENTA', pal = PR.palavra || PC.texto || '', sub = PR.sub || '';
+  const sA = 40 * u, sP = M.fitSize(g, pal, W * 0.6, 120 * u, 900, DISP, 60 * u);
+  M.setFont(g, 900, sP, DISP); const wP = g.measureText(pal).width; M.setFont(g, 800, sA, UI); const wA = g.measureText(acao).width;
+  const bw = Math.max(wP + 90 * u, wA + 80 * u, 420 * u), bh = sA * 1.6 + sP * 1.35 + 70 * u;
+  const k = M.springZ(t, 0.55, 2.4), br = 1 + 0.025 * Math.max(0, Math.sin(Math.max(0, t - 0.8) * Math.PI / 0.6)) * (t > 0.8 ? 1 : 0) * (Math.floor((t - 0.8) / 1.2) % 2 === 0 ? 1 : 0);
+  g.save(); g.translate(W / 2, CY); g.scale(k * br, k * br);
+  g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 40 * u; g.shadowOffsetY = 16 * u; g.fillStyle = C.paper;
+  M.rrect(g, -bw / 2, -bh / 2, bw, bh, 36 * u); g.fill();
+  g.beginPath(); g.moveTo(-bw * 0.18, bh / 2 - 2); g.lineTo(-bw * 0.30, bh / 2 + 46 * u); g.lineTo(-bw * 0.02, bh / 2 - 2); g.closePath(); g.fill();
+  sombra(false); M.setFont(g, 800, sA, UI); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = C.mute; g.letterSpacing = (0.08 * sA).toFixed(1) + 'px';
+  g.fillText(acao, 0, -bh / 2 + 35 * u + sA); g.letterSpacing = '0px';
+  const kc = M.springZ(t - 0.22, 0.5, 3), yc = -bh / 2 + 35 * u + sA * 1.6;
+  g.save(); g.translate(0, yc + sP * 0.62); g.scale(kc, kc); g.fillStyle = C.accent; M.rrect(g, -(wP + 50 * u) / 2, -sP * 0.62, wP + 50 * u, sP * 1.24, 22 * u); g.fill();
+  M.setFont(g, 900, sP, DISP); g.fillStyle = C.onAccent; g.textBaseline = 'middle'; g.fillText(pal, 0, sP * 0.05); g.restore();
+  g.restore();
+  if (sub) { g.save(); g.globalAlpha *= fade6(t, 0.5); linhaMascara(t, 0.5, sub, W / 2, CY + bh / 2 + 120 * u, 42 * u, 700, UI, sobreVideo(), { stag: 0.04, forte: true }); g.restore(); }
+};
+CUES.cta = () => [{ t: 0.02, type: 'pop', gain: 0.8 }, { t: 0.24, type: 'bloop', gain: 0.7 }, { t: 0.6, type: 'chime', gain: 0.45 }];
+
+// COMPARAÇÃO — duas colunas entram dos lados (isto × aquilo). Saúde: nunca "antes/depois" de paciente.
+PECAS.comparacao = (t) => {
+  const Lc = PR.esq || { titulo: 'A', itens: [] }, Rc = PR.dir || { titulo: 'B', itens: [] };
+  const cw = W * 0.40, gap = W * 0.04, hh = 120 * u + Math.max(Lc.itens.length, Rc.itens.length) * 70 * u;
+  [[Lc, -1, 0.0], [Rc, 1, 0.16]].forEach(([col, sd, d]) => {
+    const k = M.springZ(t - d, 0.8, 2.2), x = W / 2 + (sd < 0 ? -gap / 2 - cw : gap / 2) + sd * (1 - k) * W * 0.3;
+    g.save(); g.globalAlpha *= fade6(t, d); placa(x, CY - hh / 2, cw, hh, 24 * u, 1, sd < 0 ? C.paper : C.accent);
+    M.setFont(g, 900, 54 * u, DISP); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = sd < 0 ? C.ink : C.onAccent;
+    g.fillText(col.titulo, x + cw / 2, CY - hh / 2 + 76 * u);
+    M.setFont(g, 600, 38 * u, UI);
+    col.itens.forEach((it, i) => { g.globalAlpha = fade6(t, d + 0.25 + i * 0.08); g.fillText(it, x + cw / 2, CY - hh / 2 + 150 * u + i * 70 * u); });
+    g.restore();
+  });
+};
+CUES.comparacao = () => [{ t: 0.0, type: 'swish', gain: 0.5 }, { t: 0.16, type: 'swish', gain: 0.5, pan: 0.4 }];
+
+// TEXTO — cartela (tela cheia por padrão): linhas cinéticas
+PECAS.texto = (t) => {
+  const ls = PR.linhas || [PC.texto || '']; const s = Math.min(...ls.map((x) => M.fitSize(g, x, SAFE_W, (PR.tamanho || 110) * u, 900, DISP, 52 * u)));
+  const y0 = CY - ((ls.length - 1) * s * 1.15) / 2 + s * 0.35;
+  ls.forEach((x, i) => linhaMascara(t, 0.05 + i * 0.12, x, W / 2, y0 + i * s * 1.15, s, 900, DISP, sobreVideo(), { dest: PR.destaque || '', destT: 0.45 + i * 0.12, forte: true }));
+};
+CUES.texto = () => [{ t: 0.03, type: 'whoosh', gain: 0.6 }];
+
+
+// ════════════════════ PEÇAS DO MINIMAL PREMIUM (references/estilo-minimal.md) ════════════════════
+// FRASE — texto cinematográfico: palavras pequenas (sans) nos vãos + a chave GRANDE em serifa itálica no centro.
+//   params: { antes: "o que é", chave: "calling", depois: "de verdade", aspas: false }  (ou texto + chave)
+function frase(t, comAspas) {
+  let antes = PR.antes || '', chave = PR.chave || '', depois = PR.depois || '';
+  if (!chave) { const tx = PC.texto || ''; chave = tx; }
+  else if (!antes && !depois && PC.texto && PC.texto.includes(chave)) { const i = PC.texto.indexOf(chave); antes = PC.texto.slice(0, i).trim(); depois = PC.texto.slice(i + chave.length).trim(); }
+  const sK = M.fitSize(g, chave, SAFE_W * (comAspas ? 0.8 : 0.92), (PR.tamanho || 150) * u, SERIFA(700), DISP, 60 * u);
+  const sP = Math.min(M.fitSize(g, antes || ' ', SAFE_W * 0.9, (PR.tamanho_pequeno || 52) * u, 500, UI, 28 * u), M.fitSize(g, depois || ' ', SAFE_W * 0.9, (PR.tamanho_pequeno || 52) * u, 500, UI, 28 * u));
+  const gap = 0.32 * sP, yK = CY + sK * 0.32, yA = yK - sK * 0.86 - gap, yD = yK + sP * 1.25 + gap;
+  const forte = !OPACO, cS = OPACO ? tintaSuave() : 'rgba(255,255,255,.88)';
+  let t0 = 0.05;
+  if (antes) { linhaMascara(t, t0, antes, W / 2, yA, sP, 500, UI, cS, { stag: 0.06, forte }); t0 += 0.06 * antes.split(/\s+/).length + 0.08; }
+  linhaMascara(t, t0, chave, W / 2, yK, sK, SERIFA(700), DISP, PR.acento ? C.accent : tinta(), { stag: 0.09, forte });
+  if (depois) linhaMascara(t, t0 + 0.22, depois, W / 2, yD, sP, 500, UI, cS, { stag: 0.06, forte });
+  if (comAspas) {     // aspas fora do bloco: canto de cima à esquerda e canto de baixo à direita (nunca sobre o texto)
+    M.setFont(g, SERIFA(700), sK, DISP); const wK = g.measureText(chave).width; M.setFont(g, 500, sP, UI);
+    const wM = Math.max(wK, antes ? g.measureText(antes).width : 0, depois ? g.measureText(depois).width : 0);
+    const q = M.springZ(t - 0.02, 0.85, 2.0), qa = Math.min(sK * 1.3, 190 * u), pad = 0.18 * qa;
+    const topo = antes ? yA - sP * 0.9 : yK - sK * 0.85, base = depois ? yD + sP * 0.3 : yK + sK * 0.25;
+    g.save(); g.globalAlpha *= clamp(q) * 0.9; sombra(false); M.setFont(g, SERIFA(800), qa, DISP); g.fillStyle = C.accent; g.textBaseline = 'alphabetic';
+    g.textAlign = 'right'; g.fillText('\u201C', W / 2 - wM / 2 - pad + (1 - q) * 30 * u, topo + qa * 0.62);
+    g.textAlign = 'left'; g.fillText('\u201D', W / 2 + wM / 2 + pad - (1 - q) * 30 * u, base + qa * 0.72); g.restore();
+  }
+
+}
+PECAS.frase = (t) => frase(t, !!PR.aspas);
+CUES.frase = () => [{ t: 0.05, type: 'paper', gain: 0.5 }];
+PECAS.aspas = (t) => frase(t, PR.aspas !== false);
+CUES.aspas = () => [{ t: 0.03, type: 'paper', gain: 0.55 }, { t: 0.3, type: 'click', gain: 0.3 }];
+
+// LINHA — uma linha de acento se desenha, é interrompida pelas palavras e segue até a próxima; a câmera acompanha.
+//   params: { textos: ["vocação", "agilidade", "coragem"], forma: "reta"|"zigue", tempos: [s…], fundo: "escuro"|"claro" }
+function geoLinha() {
+  const tx = PR.textos || (PC.texto ? PC.texto.split(/\s*[,;·]\s*/) : ['']), n = tx.length;
+  const sz = (PR.tamanho || 118) * u, step = Math.max(W * (W < H ? 0.58 : 0.42), 520 * u), amp = PR.forma === 'zigue' ? AREA.h * (W < H ? 0.075 : 0.12) : 0;
+  const yy = (i) => CY + (i % 2 ? -amp : amp) * (PR.forma === 'zigue' ? 1 : 0);
+  M.setFont(g, SERIFA(700), sz, DISP);
+  // posições em sequência: cada texto começa depois do fim do anterior + um trecho de linha (nunca se sobrepõem)
+  let fim = W * 0.5 + 0.1 * step; const vao = Math.max(step * 0.45, 240 * u);
+  const it = tx.map((s, i) => { const w = g.measureText(s).width; const cx = fim + vao + w / 2; fim = cx + w / 2; return { s, w, cx, y: yy(i), x0: cx - w / 2 - 44 * u, x1: cx + w / 2 + 52 * u }; });
+  const T = PR.tempos && PR.tempos.length === n ? PR.tempos : tx.map((_, i) => 0.35 + i * Math.max(0.6, (DUR - 1.0) / n));
+  return { it, T, sz, startX: W * 0.08, y0: yy(-1 + 0) };
+}
+PECAS.linha = (t) => {
+  const { it, T, sz, startX } = geoLinha(), lw = 8 * u;
+  // posição da cabeça: chega em cada texto no tempo T[i] (ease), atravessa por trás dele e segue
+  const segs = it.map((x, i) => ({ a: i ? [it[i - 1].x1, it[i - 1].y] : [startX, x.y], b: [x.x0, x.y], t0: i ? T[i - 1] + 0.12 : 0.02, t1: T[i] }));
+  let head = segs[0].a;
+  g.save(); sombra(false);
+  // câmera: segue a cabeça (até o último texto centralizado)
+  const cur = segs.find((sg) => t < sg.t1) || segs[segs.length - 1];
+  const pc = E.inOut ? E.inOut(clamp((t - cur.t0) / Math.max(0.05, cur.t1 - cur.t0))) : M.ease.inOutCubic(clamp((t - cur.t0) / Math.max(0.05, cur.t1 - cur.t0)));
+  head = [cur.a[0] + (cur.b[0] - cur.a[0]) * pc, cur.a[1] + (cur.b[1] - cur.a[1]) * pc];
+  const last = it[it.length - 1], camX = clamp(head[0] - W * 0.62, 0, Math.max(0, last.cx - W * 0.5)), camY = (head[1] - CY) * 0.6;
+  g.translate(-camX, -camY);
+  g.strokeStyle = C.accent; g.lineWidth = lw; g.lineCap = 'round';
+  for (const sg of segs) {
+    const q = M.ease.inOutCubic(clamp((t - sg.t0) / Math.max(0.05, sg.t1 - sg.t0)));
+    if (q > 0) M.drawPartial(g, [sg.a, sg.b], q);
+  }
+  // cabeça (ponto claro) enquanto desenha
+  if (t < segs[segs.length - 1].t1 + 0.05) { g.fillStyle = OPACO && !ESCURO ? C.ink : '#FFFFFF'; g.beginPath(); g.arc(head[0], head[1], lw * 1.25, 0, 2 * Math.PI); g.fill(); }
+  g.restore();
+  g.save(); g.translate(-camX, -camY);
+  it.forEach((x, i) => linhaMascara(t, T[i] - 0.04, x.s, x.cx, x.y + sz * 0.33, sz, SERIFA(700), DISP, tinta(), { stag: 0.06, forte: !OPACO }));
+  g.restore();
+};
+CUES.linha = () => { const { T } = geoLinha(); return [{ t: 0.03, type: 'marker', gain: 0.45 }, ...T.map((x) => ({ t: x, type: 'paper', gain: 0.5 }))]; };
+
+// GRÁFICO — fundo escuro com grade fina; a bola de acento traça a linha (degraus/sobe/plano/cai) e a câmera segue.
+//   params: { forma: "degraus"|"sobe"|"plano"|"cai", degraus: 6, rotulo: "Lineares", tempos: [s por degrau] }
+function caminhoGrafico() {
+  const f = PR.forma || 'degraus', n = PR.degraus || 6, st = (PR.passo || 210) * u, pts = [[0, 0]];
+  if (f === 'degraus') for (let i = 0; i < n; i++) { const p = pts[pts.length - 1]; pts.push([p[0] + st, p[1]], [p[0] + st, p[1] - st * 0.75]); }
+  else for (let i = 1; i <= 24; i++) { const x = i * st * 0.5, y = f === 'plano' ? -Math.sin(i * 0.9) * 6 * u : f === 'cai' ? (i * i) * 2.2 * u : -(i * i) * 2.2 * u; pts.push([x, y]); }
+  return pts;
+}
+PECAS.grafico = (t) => {
+  const pts = caminhoGrafico(), T0 = 0.15, T1 = Math.max(T0 + 0.8, DUR - 0.45), q = (PR.forma || 'degraus') === 'degraus' ? clamp((t - T0) / (T1 - T0)) : M.ease.inOutSine(clamp((t - T0) / (T1 - T0)));
+  // posição da bola ao longo do comprimento
+  let L = 0; const ls = []; for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); ls.push(l); L += l; }
+  let d = q * L, k = 0; while (k < ls.length - 1 && d > ls[k]) { d -= ls[k]; k++; }
+  const a = pts[k], b = pts[k + 1] || a, f = ls[k] ? d / ls[k] : 0, ball = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  const ox = W * 0.56 - ball[0], oy = (PC.modo === 'split' ? AREA.h * 0.55 : H * 0.52) - ball[1];
+  // grade (desliza com a câmera)
+  const gs = 96 * u; g.save(); sombra(false); g.strokeStyle = 'rgba(255,255,255,.10)'; g.lineWidth = 1.2 * u; g.shadowColor = 'rgba(255,255,255,.25)'; g.shadowBlur = 6 * u;
+  for (let x = ((ox % gs) + gs) % gs; x < W; x += gs) { g.beginPath(); g.moveTo(x, AREA.y); g.lineTo(x, AREA.y + AREA.h); g.stroke(); }
+  for (let y = ((oy % gs) + gs) % gs; y < AREA.h; y += gs) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  g.restore();
+  // traço até a bola
+  g.save(); g.translate(ox, oy); g.strokeStyle = C.accent; g.lineWidth = 9 * u; g.lineCap = 'round'; g.lineJoin = 'round';
+  const tr = pts.slice(0, k + 1).concat([ball]); g.beginPath(); tr.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke();
+  g.shadowColor = C.accent; g.shadowBlur = 34 * u; g.fillStyle = C.accent; g.beginPath(); g.arc(ball[0], ball[1], 22 * u, 0, 2 * Math.PI); g.fill();
+  g.shadowBlur = 0; g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(ball[0], ball[1], 8 * u, 0, 2 * Math.PI); g.fill(); g.restore();
+  if (PR.rotulo) linhaMascara(t, 0.25, PR.rotulo, W * 0.08, AREA.y + AREA.h * 0.16, (PR.tamanho || 84) * u, SERIFA(700), DISP, OPACO ? C.paper : '#FFFFFF', { align: 'left', stag: 0.07, forte: !OPACO });
+};
+CUES.grafico = () => { const n = PR.degraus || 6, T0 = 0.15, T1 = Math.max(T0 + 0.8, DUR - 0.45); return (PR.forma || 'degraus') === 'degraus' ? [{ t: T0, type: 'marker', gain: 0.4 }, ...Array.from({ length: n }, (_, i) => ({ t: T0 + (T1 - T0) * ((2 * i + 1.6) / (2 * n)), type: 'tick', gain: 0.42 }))] : [{ t: T0, type: 'marker', gain: 0.5 }]; };
+
+// CAPÍTULOS — UI recorrente: N círculos; o atual preenche (varredura) e o título entra embaixo. Volta no fim com todos.
+//   params: { n: 2, total: 3, titulo: "Pare de exagerar no tamanho" }
+PECAS.capitulos = (t) => {
+  const tot = PR.total || 3, n = PR.n || 1, R = 48 * u, sp = 150 * u, x0 = W / 2 - ((tot - 1) * sp) / 2, yc = CY - (PR.titulo ? 44 * u : 0);
+  for (let i = 0; i < tot; i++) {
+    const k = M.springZ(t - 0.02 - i * 0.05, 0.75, 2.4), cx = x0 + i * sp, done = i < n - 1 || (PR.todos && i < tot), cur = i === n - 1 && !PR.todos;
+    g.save(); g.translate(cx, yc); g.scale(k, k); sombraV(!OPACO);
+    g.strokeStyle = OPACO ? tinta() : '#FFFFFF'; g.lineWidth = 3.2 * u; g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.stroke(); sombra(false);
+    const fill = done ? 1 : cur ? M.ease.inOutCubic(clamp((t - 0.25) / 0.45)) : 0;
+    if (fill > 0) { g.fillStyle = C.accent; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R - 1.5 * u, -Math.PI / 2, -Math.PI / 2 + fill * 2 * Math.PI); g.closePath(); g.fill(); }
+    M.setFont(g, 700, 38 * u, UI); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fill > 0.5 ? C.onAccent : OPACO ? tinta() : '#FFFFFF'; g.fillText(String(i + 1), 0, 2 * u);
+    g.restore();
+  }
+  if (PR.titulo) linhaMascara(t, 0.55, PR.titulo, W / 2, yc + R + 92 * u, M.fitSize(g, PR.titulo, SAFE_W, (PR.tamanho || 84) * u, SERIFA(700), DISP, 40 * u), SERIFA(700), DISP, OPACO ? tinta() : '#FFFFFF', { stag: 0.05, forte: !OPACO });
+};
+CUES.capitulos = () => [{ t: 0.25, type: 'pop', gain: 0.5 }, ...(PR.titulo ? [{ t: 0.55, type: 'paper', gain: 0.45 }] : [])];
+
+// CALLOUT — ponto no objeto (fração do quadro), linha-guia e rótulo em serifa: "isto aqui é…"
+//   params: { ponto: [0.55, 0.38], texto: "o primeiro sinal", sub: "oleosidade", lado: "direita"|"esquerda" }
+PECAS.callout = (t) => {
+  const [px, py] = (PR.ponto || [0.5, 0.4]).map((v, i) => v * (i ? AREA.h : W)), dir = PR.lado === 'esquerda' ? -1 : 1;
+  const k = M.springZ(t - 0.02, 0.6, 2.8), pulse = clamp((t - 0.1) / 0.6);
+  g.save(); sombraV(!OPACO); g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(px, py, 10 * u * k, 0, 2 * Math.PI); g.fill();
+  g.globalAlpha *= (1 - pulse) * 0.8; g.strokeStyle = '#FFFFFF'; g.lineWidth = 2.5 * u; g.beginPath(); g.arc(px, py, (12 + 40 * pulse) * u, 0, 2 * Math.PI); g.stroke(); g.restore();
+  const ex = px + dir * W * 0.12, ey = py - AREA.h * 0.08, fx = ex + dir * W * 0.14;
+  g.save(); sombraV(!OPACO); g.strokeStyle = '#FFFFFF'; g.lineWidth = 3 * u; g.lineCap = 'round'; M.drawPartial(g, [[px, py], [ex, ey], [fx, ey]], M.ease.inOutCubic(clamp((t - 0.15) / 0.45))); g.restore();
+  const sz = M.fitSize(g, PC.texto || PR.texto || '', W * 0.42, (PR.tamanho || 64) * u, SERIFA(700), DISP, 30 * u), al = dir > 0 ? 'left' : 'right', lx = fx + dir * 16 * u;
+  linhaMascara(t, 0.5, PC.texto || PR.texto || '', lx, ey + sz * 0.3, sz, SERIFA(700), DISP, '#FFFFFF', { align: al, stag: 0.05, forte: true });
+  if (PR.sub) linhaMascara(t, 0.68, PR.sub, lx, ey + sz * 0.3 + 52 * u, 36 * u, 500, UI, 'rgba(255,255,255,.88)', { align: al, stag: 0.04, forte: true });
+};
+CUES.callout = () => [{ t: 0.03, type: 'tick', gain: 0.45 }, { t: 0.16, type: 'marker', gain: 0.35 }, { t: 0.5, type: 'paper', gain: 0.4 }];
+
+
+// ════════════════════ LOOK DOSSIÊ (references/estilo-dossie.md) ════════════════════
+// Gramática do dossiê (@odossie.br; "A conta", Orbe): papelão e papel com sombra de persiana, tarjas pretas e
+// etiquetas amarelas de papel rasgado, fotos com fita, faixa vermelha com palavra gigante, caneta vermelha, serifa.
+const SERF = MK.serif || 'Instrument Serif', BAN = MK.faixa || 'Anton', MAO = MK.mao || 'Caveat';
+const DOSSIE = LOOK === 'dossie';
+const IMGS = {};
+function carregaImgs() {
+  const ps = [], add = (src) => { if (!src || IMGS[src] !== undefined) return; IMGS[src] = null; ps.push(new Promise((ok) => { const i = new Image(); i.onload = () => { IMGS[src] = i; ok(); }; i.onerror = () => ok(); i.src = src; })); };
+  if (DOSSIE) ['dossie/kraft.jpg', 'dossie/papel.jpg', 'dossie/persiana.jpg'].forEach(add);
+  (PR.fotos || []).forEach(add); if (PR.foto) add(PR.foto);
+  return Promise.all(ps);
+}
+function cobreImg(img, x, y, w, h, fx = 0.5, fy = 0.5) {
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, k = Math.max(w / iw, h / ih), sw = w / k, sh = h / k;
+  g.drawImage(img, (iw - sw) * fx, (ih - sh) * fy, sw, sh, x, y, w, h);
+}
+const novoCv = (w, h) => { const cv = document.createElement('canvas'); cv.width = Math.ceil(w); cv.height = Math.ceil(h); return cv; };
+let _grao = null;
+function grao() { if (_grao) return _grao; _grao = novoCv(180, 180); const x = _grao.getContext('2d'), id = x.createImageData(180, 180), r = M.rng(77);
+  for (let i = 0; i < id.data.length; i += 4) { const v = 150 + r() * 105; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } x.putImageData(id, 0, 0); return _grao; }
+function fundoDossie(t) {
+  const f = PR.fundo || (PC.peca === 'grade' ? 'papel' : ['aspas', 'frase', 'cta'].includes(PC.peca) ? 'cinza' : 'kraft');
+  const k = 1 + 0.035 * M.ease.inOutSine(clamp(t / Math.max(1, DUR)));
+  g.save(); g.translate(AREA.w / 2, AREA.h / 2); g.scale(k, k); g.translate(-AREA.w / 2, -AREA.h / 2);
+  if (f === 'cinza' || f === 'escuro') {
+    g.fillStyle = f === 'cinza' ? '#DAD7D0' : '#16161A'; g.fillRect(-8, -8, AREA.w + 16, AREA.h + 16);
+    const r = g.createRadialGradient(AREA.w / 2, AREA.h * 0.48, AREA.h * 0.12, AREA.w / 2, AREA.h * 0.5, AREA.h * 0.75);
+    r.addColorStop(0, 'rgba(255,255,255,.10)'); r.addColorStop(1, f === 'cinza' ? 'rgba(40,38,34,.55)' : 'rgba(0,0,0,.6)'); g.fillStyle = r; g.fillRect(-8, -8, AREA.w + 16, AREA.h + 16);
+  } else {
+    const im = IMGS[`dossie/${f}.jpg`]; if (im) cobreImg(im, -8, -8, AREA.w + 16, AREA.h + 16); else { g.fillStyle = f === 'papel' ? '#ECE8DD' : '#A88862'; g.fillRect(0, 0, AREA.w, AREA.h); }
+  }
+  g.restore();
+  const p = IMGS['dossie/persiana.jpg'];
+  if (p && f !== 'escuro') {
+    g.save(); g.globalCompositeOperation = 'multiply'; g.globalAlpha = f === 'cinza' ? 0.22 : 0.34;
+    const S = Math.max(AREA.w, AREA.h) * 2.2, des = (t * 9) % (S * 0.17);
+    g.translate(AREA.w / 2, AREA.h / 2); g.rotate(-52 * Math.PI / 180); g.drawImage(p, -S / 2, -S / 2 + des, S, S); g.drawImage(p, -S / 2, -S / 2 + des - S, S, S); g.restore();
+  }
+  M.grain(g, AREA.w, AREA.h, t, 0.045, 12);
+}
+// rótulo de papel rasgado (port do filme "A conta"): ama = etiqueta amarela · pre = tarja preta · num = número grande
+// em amarelo · ser = serifa itálica em papel claro · ver = tarja vermelha
+function rasgado(w, h, seed, amp, passo = 13) {
+  const r = M.rng(seed), pts = [], j = (k = 1) => (r() - 0.5) * 2 * amp * k, baixa = (v, k) => M.noise1(v * 0.013 + k) * amp * 1.7;
+  for (let x = 0; x < w; x += passo * (0.5 + r())) pts.push([x, baixa(x, seed) + j(0.6)]);
+  for (let y = 0; y < h; y += passo * (0.4 + r() * 0.7)) pts.push([w + baixa(y, seed + 9) + j(1.1), y]);
+  for (let x = w; x > 0; x -= passo * (0.5 + r())) pts.push([x, h + baixa(x, seed + 21) + j(0.6)]);
+  for (let y = h; y > 0; y -= passo * (0.4 + r() * 0.7)) pts.push([baixa(y, seed + 33) + j(1.1), y]);
+  return pts;
+}
+function caminho(x, pts) { x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); }
+const ROT = {
+  ama: { papel: C.accent || '#F0CA35', borda: '#FBF0C0', tinta: '#17140B', peso: 800, fam: UI, cx: 0.42, cy: 0.20, caixa: true },
+  num: { papel: C.accent || '#F0CA35', borda: '#FBF0C0', tinta: '#17140B', peso: 900, fam: UI, cx: 0.30, cy: 0.06, caixa: true, trk: -0.03 },
+  pre: { papel: '#121210', borda: '#3A3936', tinta: '#F5F2E8', peso: 800, fam: UI, cx: 0.40, cy: 0.22, caixa: true },
+  ver: { papel: '#C42A2A', borda: '#E8A0A0', tinta: '#FFFFFF', peso: 800, fam: UI, cx: 0.40, cy: 0.22, caixa: true },
+  ser: { papel: '#EFE9DC', borda: '#FFFAF0', tinta: '#1B1A17', peso: 400, fam: SERF, cx: 0.42, cy: 0.20, it: true },
+};
+const _rc = new Map();
+function rotulo(txt, tipo, px, seed = 1) {
+  const ch = `${tipo}|${txt}|${Math.round(px)}|${seed}`; if (_rc.has(ch)) return _rc.get(ch);
+  const e = ROT[tipo] || ROT.ama, fonte = `${e.it ? 'italic ' : ''}${e.peso} ${px}px ${e.fam}`, m0 = novoCv(4, 4).getContext('2d');
+  m0.font = fonte; if (e.trk) m0.letterSpacing = `${e.trk * px}px`;
+  const tt = (e.caixa ? txt.toUpperCase() : txt).replace(/ /g, e.trk ? '\u2002' : ' '), tw = m0.measureText(tt).width;
+  const w = Math.round(tw + px * e.cx * 2), h = Math.round(px * (e.it ? 1.18 : 1.0) + px * e.cy * 2), amp = Math.max(2.2, px * 0.045), m = 34, ES = 2;
+  const cv = novoCv((w + 2 * m) * ES, (h + 2 * m) * ES), x = cv.getContext('2d'); x.scale(ES, ES); x.translate(m, m);
+  const pts = rasgado(w, h, seed * 17 + tt.length, amp);
+  x.save(); x.shadowColor = 'rgba(0,0,0,.42)'; x.shadowBlur = 16; x.shadowOffsetY = 7; x.fillStyle = e.borda; caminho(x, pts); x.fill(); x.restore();
+  const interno = pts.map(([a, b]) => [a + (w / 2 - a) * (3 / w) + (M.hash1(a + b) - 0.5) * 1.5, b + (h / 2 - b) * (3.4 / h)]);
+  x.fillStyle = e.papel; caminho(x, interno); x.fill();
+  x.save(); caminho(x, interno); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = tipo === 'pre' ? 0.5 : 0.22; x.fillStyle = x.createPattern(grao(), 'repeat'); x.fillRect(-m, -m, w + 2 * m, h + 2 * m); x.restore();
+  x.font = fonte; if (e.trk) x.letterSpacing = `${e.trk * px}px`; x.fillStyle = e.tinta; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+  x.fillText(tt, px * e.cx, h / 2 + px * (e.it ? 0.27 : 0.355));
+  const sp = { cv, w, h, m }; _rc.set(ch, sp); return sp;
+}
+const qd = (n) => n / FPS;
+function bate(t, t0, dur = qd(5)) { const d = t - t0; if (d < 0) return null; const p = clamp(d / dur), ei = p * p * p; let k = 1.36 - 0.36 * ei;
+  if (p >= 1) { const q = d - dur; k = 1 - 0.024 * Math.exp(-9 * q) * Math.cos(21 * q); } return { s: k, a: clamp(d / qd(2)), r: (1 - ei) * 0.05, blur: (1 - ei) * 3 }; }
+function risca(t, t0) { const d = t - t0; if (d < 0) return null; return { clipX: E.enter(clamp(d / qd(7))), a: 1, dx: (1 - E.enter(clamp(d / qd(9)))) * -26 * u }; }
+function foca(t, t0) { const d = t - t0; if (d < 0) return null; const p = clamp(d / qd(13)); return { a: E.premium(clamp(d / qd(5))), blur: (1 - E.premium(p)) * 15, s: 1.02 - 0.02 * E.premium(p) }; }
+function poe(sp, x, y, o, rot = 0) {
+  if (!o) return;
+  g.save(); g.translate(x + (o.dx || 0), y + (o.dy || 0)); g.rotate(rot + (o.r || 0)); g.scale(o.s || 1, o.s || 1); g.globalAlpha *= o.a ?? 1;
+  if (o.blur > 0.3) g.filter = `blur(${o.blur.toFixed(2)}px)`;
+  if (o.clipX !== undefined && o.clipX < 1) { g.beginPath(); g.rect(-sp.w / 2 - 34, -sp.h / 2 - 34, (sp.w + 68) * o.clipX, sp.h + 68); g.clip(); }
+  g.drawImage(sp.cv, -sp.w / 2 - sp.m, -sp.h / 2 - sp.m, sp.w + 2 * sp.m, sp.h + 2 * sp.m); g.restore();
+}
+function entrada(tipo, t, t0) { return tipo === 'pre' || tipo === 'ver' ? risca(t, t0) : tipo === 'ser' ? foca(t, t0) : bate(t, t0); }
+const _mold = new Map();
+function moldura(w, h, seed) {
+  const ch = `${Math.round(w)}|${Math.round(h)}|${seed}`; if (_mold.has(ch)) return _mold.get(ch);
+  const m = 44, ES = 1.6, cv = novoCv((w + 2 * m) * ES, (h + 2 * m) * ES), x = cv.getContext('2d'); x.scale(ES, ES); x.translate(m, m);
+  const pts = rasgado(w, h, seed * 11, 1.6, 24);
+  x.save(); x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 26; x.shadowOffsetY = 12; x.fillStyle = '#EEE9DD'; caminho(x, pts); x.fill(); x.restore();
+  x.save(); caminho(x, pts); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = 0.16; x.fillStyle = x.createPattern(grao(), 'repeat'); x.fillRect(0, 0, w, h); x.restore();
+  const sp = { cv, w, h, m, b: Math.round(w * 0.042) }; _mold.set(ch, sp); return sp;
+}
+function fita(x, y, w, rot, seed) {
+  const r = M.rng(seed), h = w * 0.3; g.save(); g.translate(x, y); g.rotate(rot); g.beginPath(); g.moveTo(-w / 2, -h / 2);
+  for (let i = 0; i <= 6; i++) g.lineTo(-w / 2 + (w * i) / 6, -h / 2 + (r() - 0.5) * 2);
+  for (let i = 0; i <= 5; i++) g.lineTo(w / 2 + (i % 2 ? 5 : -3), -h / 2 + (h * i) / 5);
+  for (let i = 6; i >= 0; i--) g.lineTo(-w / 2 + (w * i) / 6, h / 2 + (r() - 0.5) * 2);
+  for (let i = 5; i >= 0; i--) g.lineTo(-w / 2 + (i % 2 ? -5 : 3), -h / 2 + (h * i) / 5);
+  g.closePath(); g.fillStyle = 'rgba(222,210,172,.72)'; g.fill(); g.restore();
+}
+function polaroide(x, y, w, h, rot, o, foto, seed = 1) {
+  if (!o) return; const f = moldura(w, h, seed);
+  g.save(); g.translate(x + (o.dx || 0), y + (o.dy || 0)); g.rotate(rot + (o.r || 0)); g.scale(o.s || 1, o.s || 1); g.globalAlpha *= o.a ?? 1;
+  g.drawImage(f.cv, -w / 2 - f.m, -h / 2 - f.m, w + 2 * f.m, h + 2 * f.m);
+  const b = f.b; g.save(); g.beginPath(); g.rect(-w / 2 + b, -h / 2 + b, w - 2 * b, h - 2 * b); g.clip();
+  if (foto) cobreImg(foto, -w / 2 + b, -h / 2 + b, w - 2 * b, h - 2 * b); else { g.fillStyle = '#3A3530'; g.fillRect(-w / 2, -h / 2, w, h); }
+  g.restore(); fita(0, -h / 2 + 2, w * 0.34, -0.03 * seed, seed + 40); g.restore();
+}
+function caneta(pts, t, t0, dur, cor = '#C5202C', larg = 8) {
+  const d = t - t0; if (d < 0) return; let tot = 0; for (let i = 1; i < pts.length; i++) tot += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  g.save(); g.strokeStyle = cor; g.lineWidth = larg * u; g.lineCap = 'round'; g.lineJoin = 'round'; g.setLineDash([tot * clamp(d / dur), tot + 10]);
+  g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.stroke(); g.restore();
+}
+function elipseMao(cx, cy, rx, ry, voltas = 1.18, seed = 3) {
+  const pts = [], n = 90; for (let i = 0; i <= n; i++) { const a = -2.4 + (i / n) * voltas * Math.PI * 2, k = 1 + (i / n) * 0.09 + M.noise1(i * 0.09 + seed) * 0.03; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+  return pts;
+}
+// linhas de etiqueta: [{txt, tipo}] ou strings (1ª tarja preta, depois amarelas) → empilhadas em y
+function pilha(t, ls, y0, t0 = 0.03, passo = 0.16, alinha = 'centro') {
+  const T = { num: 150, ama: 66, pre: 60, ver: 64, ser: 54 }; let y = y0;
+  const its = ls.map((l, i) => (typeof l === 'string' ? { txt: l, tipo: i === 0 ? 'pre' : 'ama' } : l));
+  const sps = its.map((l, i) => { let px = (l.px || T[l.tipo] || 64) * u; let sp = rotulo(l.txt, l.tipo, px, i + 3); while (sp.w > W * 0.9 && px > 28 * u) { px *= 0.92; sp = rotulo(l.txt, l.tipo, px, i + 3); } return sp; });
+  const alt = sps.reduce((a, sp) => a + sp.h, 0) + 10 * u * (sps.length - 1); y = y0 - alt / 2;
+  sps.forEach((sp, i) => { const cx = alinha === 'esquerda' ? W * 0.07 + sp.w / 2 : W / 2 + (i % 2 ? 1 : -1) * 6 * u; poe(sp, cx, y + sp.h / 2, entrada(its[i].tipo, t, t0 + i * passo), (i % 2 ? 0.014 : -0.018)); y += sp.h + 10 * u; });
+  return alt;
+}
+function cuesPilha(ls, t0 = 0.03, passo = 0.16) { return ls.map((l, i) => { const tp = typeof l === 'string' ? (i ? 'ama' : 'pre') : l.tipo; return { t: t0 + i * passo, type: tp === 'num' ? 'thump' : 'paper', gain: tp === 'num' ? 0.6 : 0.45 }; }); }
+
+// ETIQUETA — tarjas e etiquetas empilhadas sobre o rosto, o B-roll ou o papel ("QUASE MIL / VÍTIMAS")
+//   params: { linhas: [{txt:"Nº 1", tipo:"pre"}, {txt:"300", tipo:"num"}, {txt:"demissões diretas", tipo:"pre"}], alinha }
+PECAS.etiqueta = (t) => pilha(t, PR.linhas || [PC.texto || ''], CY, 0.03, PR.passo || 0.16, PR.alinha || 'centro');
+CUES.etiqueta = () => cuesPilha(PR.linhas || [PC.texto || ''], 0.03, PR.passo || 0.16);
+
+// FAIXA — palavra gigante em faixa vermelha + faixa branca ("VAI FECHAR / UMA FÁBRICA"), batem dos lados
+PECAS.faixa = (t) => {
+  const ls = PR.linhas || [PC.texto || ''], bh = AREA.h * 0.15, y0 = (PC.modo === 'split' ? AREA.h / 2 : CY) - (ls.length * bh) / 2;
+  if (PR.foto && IMGS[PR.foto]) polaroide(W * 0.5, y0 + ls.length * bh + AREA.h * 0.16, W * 0.62, W * 0.46, -0.04, bate(t, 0.2), IMGS[PR.foto], 5);
+  ls.forEach((txt, i) => {
+    const d = t - 0.02 - i * 0.12, p = E.enter(clamp(d / 0.22)); if (d < 0) return;
+    const y = y0 + i * bh, sd = i % 2 ? 1 : -1, cor = i % 2 ? '#F2EFE8' : '#C42A2A', tinta = i % 2 ? '#141414' : '#FFFFFF';
+    g.save(); g.translate(sd * (1 - p) * W, 0); g.fillStyle = cor; g.fillRect(0, y, W, bh);
+    g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.18; g.fillStyle = g.createPattern(grao(), 'repeat'); g.fillRect(0, y, W, bh); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+    const sz = M.fitSize(g, txt, W * 0.94, bh * 1.02, 400, BAN, 40 * u); M.setFont(g, 400, sz, BAN); g.fillStyle = tinta; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(txt, W / 2, y + bh * 0.53); g.restore();
+  });
+};
+CUES.faixa = () => (PR.linhas || [0]).map((_, i) => ({ t: 0.04 + i * 0.12, type: i ? 'swish' : 'thump', gain: 0.65 }));
+
+// GRADE — a conta em quadradinhos: N dias/visitas marcados em amarelo, um a um, no papel quadriculado
+//   params: { total: 45, colunas: 9, rotulo: "45 DIAS", nota: "de 38 a 45% a mais", marcados: 45 }
+const _quad = [];
+function quadAma(k) { if (_quad[k]) return _quad[k]; const cv = novoCv(120, 120), x = cv.getContext('2d'), r = M.rng(900 + k), pts = rasgado(96, 96, 300 + k, 2.4, 16).map(([a, b]) => [a + 12, b + 12]);
+  x.fillStyle = C.accent || '#F0CA35'; caminho(x, pts); x.fill(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = 0.28; x.fillStyle = x.createPattern(grao(), 'repeat'); x.fillRect(0, 0, 120, 120);
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = 0.85; x.strokeStyle = '#2A2415'; x.lineWidth = 2.6; caminho(x, pts.map(([a, b]) => [a + (r() - 0.5) * 2, b + (r() - 0.5) * 2])); x.stroke(); return (_quad[k] = cv); }
+PECAS.grade = (t) => {
+  const N = PR.total || 48, col = PR.colunas || Math.ceil(Math.sqrt(N * 0.6)), lin = Math.ceil(N / col), mk = PR.marcados ?? N;
+  const cel = Math.min(W * 0.78 / col, AREA.h * 0.46 / lin), x0 = W / 2 - (col * cel) / 2, y0 = (PC.modo === 'split' ? AREA.h * 0.52 : H * 0.5) - (lin * cel) / 2;
+  const T0 = 0.35, T1 = Math.max(T0 + 0.6, DUR - 0.9), n = Math.floor(mk * clamp((t - T0) / (T1 - T0)) ** 0.85);
+  g.save(); g.strokeStyle = 'rgba(40,52,80,.30)'; g.lineWidth = 1.5 * u;
+  for (let i = 0; i < N; i++) { const cx = x0 + (i % col) * cel, cy = y0 + Math.floor(i / col) * cel; g.strokeRect(cx + cel * 0.12, cy + cel * 0.12, cel * 0.76, cel * 0.76); }
+  for (let i = 0; i < Math.min(n, N); i++) { const cx = x0 + (i % col) * cel, cy = y0 + Math.floor(i / col) * cel, kq = clamp((t - T0 - (i / mk) * (T1 - T0)) / 0.08); g.globalAlpha = kq; g.drawImage(quadAma(i % 4), cx + cel * 0.05, cy + cel * 0.05, cel * 0.9, cel * 0.9); }
+  g.restore();
+  if (PR.rotulo) { const sp = rotulo(PR.rotulo, 'num', (PR.tamanho || 120) * u, 2); poe(sp, W / 2, y0 - sp.h * 0.75, bate(t, 0.05), -0.015); }
+  if (PR.nota) { const d = t - (T1 + 0.05); if (d > 0) { M.setFont(g, 700, 78 * u, MAO); const w = g.measureText(PR.nota).width; g.save(); g.beginPath(); g.rect(W / 2 - w / 2 - 16, y0 + lin * cel + 20 * u, (w + 32) * clamp(d / 0.6), 110 * u); g.clip(); g.fillStyle = '#20304E'; g.textAlign = 'center'; g.fillText(PR.nota, W / 2, y0 + lin * cel + 100 * u); g.restore(); } }
+};
+CUES.grade = () => { const T0 = 0.35, T1 = Math.max(T0 + 0.6, DUR - 0.9); return [{ t: 0.05, type: 'thump', gain: 0.55 }, { t: T0, type: 'marker', gain: 0.4 }, { t: T1, type: 'tick', gain: 0.5 }, ...(PR.nota ? [{ t: T1 + 0.05, type: 'paper', gain: 0.35 }] : [])]; };
+
+// COLAGEM — título em tarja, fotos com fita que batem na mesa e etiquetas nelas (o "mural" do dossiê)
+//   params: { titulo: "AS EMPRESAS", fotos: ["img/a.jpg", …], etiquetas: ["O QUE FIZEMOS", "COMO FIZEMOS"], fundo: "kraft" }
+PECAS.colagem = (t) => {
+  const fs = (PR.fotos || []).map((f) => IMGS[f]).filter(Boolean), et = PR.etiquetas || [], top = AREA.h * 0.12;
+  if (PR.titulo) poe(rotulo(PR.titulo, 'pre', 64 * u, 1), W / 2, top, risca(t, 0.02), -0.012);
+  const pos = [[0.36, 0.36, -0.06], [0.64, 0.52, 0.05], [0.40, 0.70, -0.03]];
+  fs.slice(0, 3).forEach((f, i) => { const [px, py, rot] = pos[i], pw = W * 0.52, ph = pw * 0.74; polaroide(W * px, AREA.h * py, pw, ph, rot, bate(t, 0.22 + i * 0.32, qd(6)), f, i + 2); });
+  et.forEach((e, i) => { const [px, py] = pos[Math.min(i, 2)]; const sp = rotulo(typeof e === 'string' ? e : e.txt, typeof e === 'string' ? 'ama' : e.tipo, 58 * u, i + 7); poe(sp, W * (px + (i % 2 ? -0.06 : 0.08)), AREA.h * (py + 0.14), bate(t, 0.42 + i * 0.32), i % 2 ? 0.02 : -0.02); });
+};
+CUES.colagem = () => [...(PR.titulo ? [{ t: 0.02, type: 'swish', gain: 0.4 }] : []), ...(PR.fotos || []).slice(0, 3).map((_, i) => ({ t: 0.22 + i * 0.32, type: 'thump', gain: 0.5 })), ...(PR.etiquetas || []).map((_, i) => ({ t: 0.42 + i * 0.32, type: 'paper', gain: 0.4 }))];
+
+// RECORTE — manchete de jornal no papel; caneta vermelha circula a palavra
+//   params: { manchete: "…", circula: "palavra", sub: "segundo a empresa" }  (só manchete REAL, com fonte guardada)
+PECAS.recorte = (t) => {
+  const tx = PR.manchete || PC.texto || '', sz = M.fitSize(g, tx, W * 0.84, 92 * u, 400, SERF, 40 * u);
+  M.setFont(g, 400, sz, SERF); const ws = tx.split(' '), lines = []; let cur = '';
+  ws.forEach((w) => { const tst = cur ? cur + ' ' + w : w; if (g.measureText(tst).width > W * 0.84 && cur) { lines.push(cur); cur = w; } else cur = tst; }); if (cur) lines.push(cur);
+  const y0 = AREA.h * 0.30, a = foca(t, 0.02);
+  g.save(); g.globalAlpha *= a ? a.a : 0; g.fillStyle = '#1C1B18'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  lines.forEach((l, i) => g.fillText(l, W * 0.08, y0 + i * sz * 1.08)); g.restore();
+  if (PR.circula) {
+    lines.forEach((l, i) => { const k = l.indexOf(PR.circula); if (k < 0) return; const x1 = W * 0.08 + g.measureText(l.slice(0, k)).width, w = g.measureText(PR.circula).width;
+      caneta(elipseMao(x1 + w / 2, y0 + i * sz * 1.08 - sz * 0.3, w * 0.62, sz * 0.62), t, 0.55, 0.45); });
+  }
+  if (PR.sub) poe(rotulo(PR.sub, 'pre', 44 * u, 4), W / 2, y0 + lines.length * sz * 1.08 + 90 * u, risca(t, 0.9), -0.01);
+};
+CUES.recorte = () => [{ t: 0.03, type: 'paper', gain: 0.45 }, ...(PR.circula ? [{ t: 0.55, type: 'marker', gain: 0.5 }] : []), ...(PR.sub ? [{ t: 0.9, type: 'swish', gain: 0.35 }] : [])];
+
+// peças do catálogo no look dossiê: viram etiquetas (número, título, palavra, CTA) e cartão cinza (frase/aspas)
+if (DOSSIE) {
+  const fmt = (v) => (PR.prefixo || '') + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: PR.decimais || 0, maximumFractionDigits: PR.decimais || 0 }) + (PR.sufixo || '');
+  PECAS.numero = (t) => { const v = +PR.valor || 0, p = clamp((t - 0.05) / 0.7), conta = (PR.decimais || 0) > 0 || Math.abs(v) >= 10 || PR.contar === true, cur = p >= 1 || !conta ? v : v * E.enter(p);
+    const ls = [{ txt: fmt(PR.decimais ? cur : Math.round(cur)), tipo: 'num' }, ...(PR.rotulo ? [{ txt: PR.rotulo, tipo: 'pre' }] : [])]; pilha(t, ls, CY, 0.03, 0.22); };
+  CUES.numero = () => [{ t: 0.03, type: 'thump', gain: 0.6 }, ...(PR.rotulo ? [{ t: 0.25, type: 'paper', gain: 0.4 }] : [])];
+  PECAS.titulo = (t) => { const L = PR.linhas || [PC.texto || '']; pilha(t, [{ txt: L[0], tipo: 'pre' }, ...(L[1] ? [{ txt: L[1], tipo: 'ser' }] : [])], CY); };
+  CUES.titulo = () => cuesPilha([{ tipo: 'pre' }, ...((PR.linhas || [])[1] ? [{ tipo: 'ser' }] : [])]);
+  PECAS.palavra = (t) => pilha(t, [{ txt: PC.texto || PR.texto || '', tipo: 'ama', px: 96 }, ...(PR.sub ? [{ txt: PR.sub, tipo: 'ser' }] : [])], CY);
+  CUES.palavra = () => [{ t: 0.03, type: 'thump', gain: 0.6 }];
+  PECAS.cta = (t) => pilha(t, [{ txt: PR.acao || 'COMENTA', tipo: 'pre' }, { txt: PR.palavra || PC.texto || '', tipo: 'ama', px: 92 }, ...(PR.sub ? [{ txt: PR.sub, tipo: 'ser' }] : [])], CY, 0.03, 0.2);
+  CUES.cta = () => [{ t: 0.03, type: 'swish', gain: 0.4 }, { t: 0.23, type: 'thump', gain: 0.6 }, { t: 0.43, type: 'paper', gain: 0.35 }];
+  const cartao = (t) => { const a = PR.antes || '', d = PR.depois || '', k = PR.chave || PC.texto || '', s = 58 * u; let y = CY - 80 * u;
+    const ser = (txt, yy, t0) => { if (!txt) return; const o = foca(t, t0); if (!o) return; g.save(); g.globalAlpha *= o.a; if (o.blur > 0.3) g.filter = `blur(${o.blur.toFixed(1)}px)`; M.setFont(g, 'italic 400', M.fitSize(g, txt, W * 0.8, s, 'italic 400', SERF, 30 * u), SERF); g.fillStyle = OPACO ? '#2A2925' : '#FFFFFF'; g.textAlign = 'center'; g.fillText(txt, W / 2, yy); g.restore(); };
+    ser(a, y, 0.02); if (a) y += s * 1.3; const sp = rotulo(k, 'ama', 72 * u, 9); poe(sp, W / 2, y + sp.h * 0.35, bate(t, a ? 0.35 : 0.05), -0.012); ser(d, y + sp.h + 40 * u, 0.6); };
+  PECAS.frase = cartao; PECAS.aspas = cartao;
+  CUES.frase = () => [{ t: 0.35, type: 'thump', gain: 0.5 }]; CUES.aspas = CUES.frase;
+}
+
+// ════════════════════ peças Style Studio / Joseph (v1.4) ════════════════════
+// SLAM — o número que a vídeo existe para dizer: o valor antigo espera em cima e é riscado, o novo CAI na palavra
+//   params: { valor: "R$ 0", antes: "R$ 240", rotulo: "por mês", em: 0.35 } — 1–2 por vídeo, nunca 2 seguidos
+PECAS.slam = (t) => {
+  const em = PR.em ?? 0.35, val = String(PR.valor ?? PC.texto ?? ''), was = PR.antes ? String(PR.antes) : '';
+  const s = M.fitSize(g, val, SAFE_W * 0.96, (PR.tamanho || 330) * u, 900, DISP, 90 * u);
+  const yv = CY + s * 0.32, sh = t >= em && t < em + 0.28 ? (1 - (t - em) / 0.28) * 14 * u : 0;
+  g.save(); g.translate(M.noise1(t * 40) * sh, M.noise1(t * 40 + 7) * sh);
+  if (was) {            // valor antigo: aparece, é riscado 0,15 s antes da queda, encolhe
+    const a = fade6(t, 0), sw = M.fitSize(g, was, SAFE_W * 0.6, 120 * u, 800, DISP, 40 * u), yw = CY - s * 0.62;
+    const enc = 1 - 0.25 * E.premium(clamp((t - em) / 0.3));
+    g.save(); g.globalAlpha *= a * (t > em ? 0.55 : 1); g.translate(W / 2, yw); g.scale(enc, enc);
+    M.setFont(g, 800, sw, DISP); g.textAlign = 'center'; g.textBaseline = 'middle'; sombraV(); g.fillStyle = OPACO ? tinta() : '#FFFFFF'; g.fillText(was, 0, 0);
+    const ww = g.measureText(was).width, q = E.premium(clamp((t - (em - 0.18)) / 0.16));
+    sombra(false); g.strokeStyle = MK.friction || '#FF3B30'; g.lineWidth = 0.09 * sw; g.lineCap = 'round';
+    if (q > 0) { g.beginPath(); g.moveTo(-ww / 2 - 0.1 * sw, 0.05 * sw); g.lineTo(-ww / 2 - 0.1 * sw + (ww + 0.2 * sw) * q, -0.05 * sw); g.stroke(); }
+    g.restore();
+  }
+  if (t >= em - 0.06) {     // a queda: vem grande e borrado, assenta com mola dura
+    const k = M.springZ(t - em + 0.06, 0.45, 3.4), sc = 1.9 - 0.9 * Math.min(1.08, k);
+    g.save(); g.translate(W / 2, yv); g.scale(sc, sc);
+    if (k < 0.6) g.filter = `blur(${((0.6 - k) * 14 * u).toFixed(1)}px)`;
+    M.setFont(g, 900, s, DISP); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; sombraV(); g.fillStyle = C.accent; g.fillText(val, 0, 0);
+    g.restore();
+    const r = E.enter(clamp((t - em) / 0.5));     // onda de choque na cor de destaque
+    if (r > 0 && r < 1) { g.save(); g.globalAlpha *= (1 - r) * 0.8; g.strokeStyle = C.accent; g.lineWidth = (10 - 8 * r) * u; g.beginPath(); g.ellipse(W / 2, yv - s * 0.35, (0.3 + 0.9 * r) * s, (0.18 + 0.5 * r) * s, 0, 0, 2 * Math.PI); g.stroke(); g.restore(); }
+  }
+  if (PR.rotulo) { g.save(); g.globalAlpha *= fade6(t, em + 0.25); linhaMascara(t, em + 0.25, PR.rotulo, W / 2, yv + 0.42 * s, 50 * u, 700, UI, OPACO ? tinta() : '#FFFFFF', { stag: 0.04, forte: true }); g.restore(); }
+  g.restore();
+};
+CUES.slam = () => [...(PR.antes ? [{ t: Math.max(0, (PR.em ?? 0.35) - 0.18), type: 'swish', gain: 0.45 }] : []), { t: PR.em ?? 0.35, type: 'impact', gain: 0.9 }];
+
+// NOTIFICAÇÃO — card de app que desce do topo (venda, mensagem, agendamento): ícone, app, título, texto, valor
+//   params: { app: "Agenda", icone: "A", titulo: "Nova consulta", texto: "Amanhã · 14h", valor: "+R$ 1.290", selo: "Confirmado", hora: "agora" }
+//   Marca de terceiros (logo/nome) só com permissão; valor = o que a pessoa disse. Use "fundo": "escurece" no item.
+PECAS.notificacao = (t) => {
+  const w = Math.min(W * 0.9, 900 * u), h = 176 * u, x = W / 2 - w / 2, r = 38 * u;
+  const k = M.springZ(t - 0.02, 0.72, 2.6), y = (PC.posicao === 'centro' ? CY - h / 2 : H * 0.12) - (1 - k) * (h + 120 * u);
+  g.save(); g.globalAlpha *= clamp(k * 1.5);
+  g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 50 * u; g.shadowOffsetY = 18 * u;
+  g.fillStyle = 'rgba(30,30,34,.90)'; M.rrect(g, x, y, w, h, r); g.fill(); sombra(false);
+  g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 2 * u; M.rrect(g, x, y, w, h, r); g.stroke();
+  const ic = 92 * u, ix = x + 34 * u, iy = y + (h - ic) / 2;
+  const gr = g.createLinearGradient(ix, iy, ix + ic, iy + ic); gr.addColorStop(0, C.accent); gr.addColorStop(1, M.mixHex(C.accent, '#000000', 0.35));
+  g.fillStyle = gr; M.rrect(g, ix, iy, ic, ic, 22 * u); g.fill();
+  M.setFont(g, 800, 50 * u, UI); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = C.onAccent; g.fillText(String(PR.icone || (PR.app || 'A')[0]).slice(0, 2), ix + ic / 2, iy + ic / 2 + 2 * u);
+  const tx = ix + ic + 30 * u; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  M.setFont(g, 600, 30 * u, UI); g.fillStyle = 'rgba(255,255,255,.62)'; g.fillText(`${PR.app || 'App'}${PR.hora ? '  ·  ' + PR.hora : ''}`, tx, y + 58 * u);
+  M.setFont(g, 700, 40 * u, UI); g.fillStyle = '#FFFFFF'; g.fillText(PR.titulo || PC.texto || '', tx, y + 106 * u);
+  if (PR.texto) { M.setFont(g, 500, 32 * u, UI); g.fillStyle = 'rgba(255,255,255,.72)'; g.fillText(PR.texto, tx, y + 148 * u); }
+  if (PR.valor) {
+    const q = M.springZ(t - 0.35, 0.6, 2.8); g.save(); g.globalAlpha *= clamp(q * 2); g.textAlign = 'right';
+    M.setFont(g, 800, 46 * u, UI); g.fillStyle = PR.cor_valor || '#3DDC84'; g.fillText(PR.valor, x + w - 36 * u, y + 100 * u);
+    if (PR.selo) { M.setFont(g, 700, 24 * u, UI); const sw = g.measureText(PR.selo).width + 28 * u; g.fillStyle = 'rgba(61,220,132,.18)'; M.rrect(g, x + w - 36 * u - sw, y + 118 * u, sw, 38 * u, 19 * u); g.fill(); g.fillStyle = '#3DDC84'; g.textAlign = 'center'; g.fillText(PR.selo, x + w - 36 * u - sw / 2, y + 145 * u); }
+    g.restore();
+  }
+  g.restore();
+};
+CUES.notificacao = () => [{ t: 0.04, type: 'swipe', gain: 0.4 }, { t: 0.2, type: 'chime', gain: 0.55 }, ...(PR.valor ? [{ t: 0.38, type: 'ding', gain: 0.5 }] : [])];
+
+// ANEL — contador circular: trilho cinza, arco na cor de destaque, número contando no meio (tempo, %, meta)
+//   params: { valor: 72, total: 100, sufixo: "%", rotulo: "das clínicas" } ou { texto: "1h 30m", fracao: 0.75 }
+PECAS.anel = (t) => {
+  const R = (PR.raio || 190) * u, lw = 26 * u, yc = CY - (PR.rotulo ? 40 * u : 0), k = M.springZ(t - 0.02, 0.75, 2.4);
+  const fr = PR.fracao ?? (PR.total ? (+PR.valor || 0) / PR.total : 1), p = E.premium(clamp((t - 0.15) / 1.0)), cur = fr * p;
+  g.save(); g.translate(W / 2, yc); g.scale(k, k);
+  g.lineCap = 'round'; g.lineWidth = lw; g.strokeStyle = OPACO ? M.mixHex(tinta(), C.bg, 0.8) : 'rgba(255,255,255,.22)';
+  g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.stroke();
+  sombraV(!OPACO); g.strokeStyle = C.accent; g.beginPath(); g.arc(0, 0, R, -Math.PI / 2, -Math.PI / 2 + Math.max(0.001, cur) * 2 * Math.PI); g.stroke(); sombra(false);
+  const txt = PR.texto || ((PR.prefixo || '') + Math.round((+PR.valor || 0) * (PR.texto ? 1 : p)).toLocaleString('pt-BR') + (PR.sufixo || ''));
+  const s = M.fitSize(g, txt, R * 1.45, 120 * u, 900, DISP, 40 * u);
+  M.setFont(g, 900, s, DISP); g.textAlign = 'center'; g.textBaseline = 'middle'; sombraV(!OPACO); g.fillStyle = OPACO ? tinta() : '#FFFFFF'; g.fillText(txt, 0, 4 * u);
+  g.restore();
+  if (PR.rotulo) { g.save(); g.globalAlpha *= fade6(t, 0.4); linhaMascara(t, 0.4, PR.rotulo, W / 2, yc + R + 90 * u, 48 * u, 700, UI, OPACO ? tinta() : '#FFFFFF', { stag: 0.04, forte: true }); g.restore(); }
+};
+CUES.anel = () => [{ t: 0.12, type: 'riser', gain: 0.35 }, { t: 1.15, type: 'ding', gain: 0.55 }];
+
+// PÍLULA — selo de vidro com ícone + texto curto ("⏱ 1h 30m", "✓ sem agulha"): ancora o gancho sem tomar a tela
+//   params: { texto: "1h 30m", icone: "relogio" | "check" | "raio" | "nenhum" }
+PECAS.pilula = (t) => {
+  const tx = PR.texto || PC.texto || ''; M.setFont(g, 800, 54 * u, UI); const tw = g.measureText(tx).width;
+  const ic = (PR.icone || 'relogio') !== 'nenhum', h = 104 * u, w = tw + (ic ? 140 : 90) * u, x = W / 2 - w / 2, y = CY - h / 2;
+  const k = M.springZ(t - 0.02, 0.6, 2.8); g.save(); g.translate(W / 2, CY); g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k); g.translate(-W / 2, -CY); g.globalAlpha *= clamp(k * 1.6);
+  g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 30 * u; g.shadowOffsetY = 10 * u;
+  g.fillStyle = OPACO ? M.mixHex(C.bg, '#FFFFFF', 0.1) : 'rgba(18,18,22,.62)'; M.rrect(g, x, y, w, h, h / 2); g.fill(); sombra(false);
+  g.strokeStyle = 'rgba(255,255,255,.30)'; g.lineWidth = 2.2 * u; M.rrect(g, x, y, w, h, h / 2); g.stroke();
+  let cx = x + 50 * u + (ic ? 0 : -20 * u);
+  if (ic) {
+    g.strokeStyle = '#FFFFFF'; g.lineWidth = 5 * u; g.lineCap = 'round'; const rr = 21 * u, cy = CY + 1 * u;
+    if (PR.icone === 'check') { g.beginPath(); g.moveTo(cx - rr * 0.8, cy); g.lineTo(cx - rr * 0.2, cy + rr * 0.6); g.lineTo(cx + rr * 0.9, cy - rr * 0.6); g.stroke(); }
+    else if (PR.icone === 'raio') { g.fillStyle = C.accent; g.beginPath(); g.moveTo(cx + 4 * u, cy - rr); g.lineTo(cx - 12 * u, cy + 3 * u); g.lineTo(cx, cy + 3 * u); g.lineTo(cx - 4 * u, cy + rr); g.lineTo(cx + 12 * u, cy - 3 * u); g.lineTo(cx, cy - 3 * u); g.closePath(); g.fill(); }
+    else { g.beginPath(); g.arc(cx, cy + 2 * u, rr, 0, 2 * Math.PI); g.stroke(); const a = -Math.PI / 2 + E.enter(clamp(t / 0.8)) * 1.5 * Math.PI; g.beginPath(); g.moveTo(cx, cy + 2 * u); g.lineTo(cx + Math.cos(a) * rr * 0.7, cy + 2 * u + Math.sin(a) * rr * 0.7); g.stroke(); g.beginPath(); g.moveTo(cx - 7 * u, cy - rr - 7 * u); g.lineTo(cx + 7 * u, cy - rr - 7 * u); g.stroke(); }
+    cx += 46 * u;
+  }
+  M.setFont(g, 800, 54 * u, UI); g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = '#FFFFFF'; g.fillText(tx, cx, CY + 3 * u);
+  g.restore();
+};
+CUES.pilula = () => [{ t: 0.03, type: 'pop', gain: 0.5 }];
+
+// CAPÍTULOS em LOSANGO (Joseph): losango com gradiente leve, traço fino, número no meio; "tag": true = o losango do
+// capítulo atual pequeno + o nome ao lado (reaparece sempre que o capítulo é citado). params: forma: "losango", nomes: []
+const _capCirc = PECAS.capitulos;
+PECAS.capitulos = (t) => {
+  if (PR.forma !== 'losango') return _capCirc(t);
+  const tot = PR.total || 3, n = PR.n || 1, nomes = PR.nomes || [];
+  const los = (cx, cy, R, k, cur, done, num) => {
+    g.save(); g.translate(cx, cy); g.scale(k, k); g.rotate(Math.PI / 4);
+    const base = cur || done ? C.accent : (OPACO ? M.mixHex(C.bg, '#FFFFFF', 0.14) : '#1C1C22');
+    const gr = g.createLinearGradient(-R, -R, R, R); gr.addColorStop(0, M.mixHex(base, '#FFFFFF', 0.2)); gr.addColorStop(1, M.mixHex(base, '#000000', 0.15));
+    if (!(cur || done) && !OPACO) g.globalAlpha *= 0.82;
+    sombraV(!OPACO); g.fillStyle = gr; M.rrect(g, -R * 0.72, -R * 0.72, R * 1.44, R * 1.44, R * 0.16); g.fill(); sombra(false);
+    g.strokeStyle = cur || done ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.45)'; g.lineWidth = 2 * u; g.stroke(); g.rotate(-Math.PI / 4);
+    M.setFont(g, 800, R * 0.62, UI); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = cur || done ? C.onAccent : '#FFFFFF'; g.fillText(String(num), 0, 2 * u);
+    g.restore();
+  };
+  if (PR.tag) {      // o capítulo citado: losango pequeno + nome
+    const R = 56 * u, nome = nomes[n - 1] || PR.titulo || '', k = M.springZ(t - 0.02, 0.7, 2.6);
+    M.setFont(g, 800, 58 * u, DISP); const tw = g.measureText(nome).width, x0 = W / 2 - (2 * R + 28 * u + tw) / 2;
+    los(x0 + R, CY, R, k, true, false, n);
+    if (nome) linhaMascara(t, 0.12, nome, x0 + 2 * R + 28 * u, CY + 20 * u, 58 * u, 800, DISP, OPACO ? tinta() : '#FFFFFF', { align: 'left', stag: 0.05, forte: !OPACO });
+    return;
+  }
+  const R = 70 * u, sp = 200 * u, x0 = W / 2 - ((tot - 1) * sp) / 2, yc = CY - (nomes.length ? 50 * u : 0);
+  for (let i = 0; i < tot; i++) {
+    const k = M.springZ(t - 0.05 - i * 0.12, 0.72, 2.6);
+    los(x0 + i * sp, yc, R, k, i === n - 1 && !PR.todos, i < n - 1 || PR.todos, i + 1);
+    if (nomes[i]) { g.save(); g.globalAlpha *= fade6(t, 0.25 + i * 0.12); M.setFont(g, 700, 36 * u, UI); g.textAlign = 'center'; g.textBaseline = 'top'; sombraV(!OPACO); g.fillStyle = OPACO ? tinta() : '#FFFFFF'; g.fillText(nomes[i], x0 + i * sp, yc + R + 34 * u); g.restore(); }
+  }
+};
+const _capCues = CUES.capitulos;
+CUES.capitulos = () => PR.forma === 'losango' ? (PR.tag ? [{ t: 0.03, type: 'pop', gain: 0.45 }] : Array.from({ length: PR.total || 3 }, (_, i) => ({ t: 0.05 + i * 0.12, type: 'pop', gain: 0.4 }))) : _capCues();
+
+
+// ════════════════════ PEÇAS v1.5 — lifestyle (rótulo creme, gancho empilhado, card de documento) e entrevista (cartela) ════════════════════
+const SCRIPT = MK.script || 'Great Vibes', CREME = MK.creme || '#F3ECB8';
+function sombraSuave(f = 1) { if (OPACO) { sombra(false); return; } g.shadowColor = `rgba(0,0,0,${(0.30 * f).toFixed(2)})`; g.shadowBlur = 26 * u; g.shadowOffsetY = 2 * u; }
+// texto claro sobre fundo claro (parede, persiana): passa 1 = halo largo e fraco (separa do fundo sem parecer sombra), passa 2 = sombra curta
+function textoHalo(tx, x, y, f = 1) { if (OPACO) { g.fillText(tx, x, y); return; } g.save(); g.shadowColor = `rgba(0,0,0,${(0.32 * f).toFixed(2)})`; g.shadowBlur = 64 * u; g.shadowOffsetY = 0; g.fillText(tx, x, y); g.restore(); sombraSuave(f); g.fillText(tx, x, y); }
+const FUNC_PT = new Set('a o as os de da do das dos e é em no na nos nas num numa um uma que pra para pro por com se ao à'.split(' '));
+const limpaW = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+// EMPILHA — gancho gigante que se EMPILHA no ritmo da fala, uma linha por palavra (R1: "POSTE / TUDO / 5 / VEZES"),
+//   no terço de cima (acima da cabeça, ou atrás dela com "atras": true no mapa). Cor creme, sans média, sem caixa.
+//   params: { linhas?: ["POSTE","TUDO","5 VEZES"], cor?, peso?: 500, caixa?: "alta"|"frase", tamanho?: 210, fonte?: "ui"|"display", som?: false }
+//   Os tempos vêm da fala (params._palavras, que o mapa.py preenche); sem fala, cascata de 0,35 s.
+function linhasEmpilha() {
+  // cada linha entra quando a SUA palavra é dita: {txt, em: "#16"} (índice da fala) ou casa a 1ª palavra da linha
+  // com a próxima palavra igual na fala; sem casar, cascata de 0,35 s
+  const pw = PR._palavras || []; let ls = PR.linhas;
+  if (!ls || !ls.length) ls = pw.length ? pw.map((p) => p.w) : (PC.texto || '').split(/\s+/).filter(Boolean);
+  const T = []; let k = 0;
+  ls.forEach((l, i) => {
+    const o = typeof l === 'string' ? { txt: l } : l, ini = limpaW(String(o.txt).split(/\s+/)[0] || '');
+    let j = o.em != null ? pw.findIndex((p) => '#' + p.i === String(o.em) || p.i === o.em) : -1;
+    if (j < 0) j = pw.findIndex((p, q) => q >= k && limpaW(p.w) === ini);
+    T.push(j >= 0 ? Math.max(0, pw[j].t - 0.03) : (T.length ? T[T.length - 1] + 0.35 : 0.05)); if (j >= 0) k = j + 1;
+  });
+  const alta = (PR.caixa || 'alta') === 'alta';
+  return { ls: ls.map((l) => { const x = typeof l === 'string' ? l : l.txt; return (alta ? String(x).toUpperCase() : String(x)).replace(/[,.;:…]+$/, ''); }), T };
+}
+PECAS.empilha = (t) => {
+  const { ls, T } = linhasEmpilha(); if (!ls.length) return;
+  const peso = PR.peso || 500, fam = PR.fonte === 'display' ? DISP : UI;
+  let s = Math.min(...ls.map((l) => M.fitSize(g, l, W * 0.86, (PR.tamanho || 210) * u, peso, fam, 50 * u)));
+  const LH = ls.some((l) => /[ÁÉÍÓÚÂÊÔÃÕÇÀ]/.test(l)) ? 1.06 : 0.98;      // acento em caixa alta pede respiro entre linhas
+  if (s * LH * ls.length > VAGA) s = VAGA / (LH * ls.length);
+  const lh = s * LH, y0 = CY - (lh * ls.length) / 2 + s * 0.8;
+  ls.forEach((l, i) => {
+    const p = M.springZ(t - T[i], 0.8, 2.6); if (p <= 0.001) return;
+    g.save(); g.globalAlpha *= clamp(p * 1.5);
+    M.setFont(g, peso, s, fam); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.letterSpacing = (-0.012 * s).toFixed(1) + 'px';
+    g.fillStyle = PR.cor || CREME; textoHalo(l, W / 2, y0 + i * lh + (1 - p) * 0.22 * s, 1.1);
+    g.letterSpacing = '0px'; g.restore();
+  });
+};
+CUES.empilha = () => (PR.som === false ? [] : linhasEmpilha().T.map((x) => ({ t: x + 0.02, type: 'tick', gain: 0.22 })));
+
+// RÓTULO — a ideia-chave em dupla tipográfica (R1): sans + manuscrita na cor creme, no espaço livre, 2–4 s, sem caixa;
+//   ou "tecnico" (R3): nome + "- função -" pequenos em amarelo no terço de baixo (passo, plano, etapa).
+//   params: { linhas: ["5 Ganchos", {txt: "diferentes", fonte: "script"}], estilo: "creme"|"tecnico", cor, tamanho: 96 }
+//   atalho: { titulo: "Gancho", script: true, sub: "parte mais importante" } · fonte: sans | script | serif · tam: fator
+function linhasRotulo() {
+  if (PR.linhas) return PR.linhas.map((x) => (typeof x === 'string' ? { txt: x, fonte: 'sans' } : { fonte: 'sans', ...x }));
+  const out = [];
+  if (PR.titulo || PC.texto) out.push({ txt: PR.titulo || PC.texto, fonte: PR.script ? 'script' : 'sans' });
+  if (PR.sub) out.push({ txt: PR.sub, fonte: 'sans', tam: 0.36 });
+  return out;
+}
+PECAS.rotulo = (t) => {
+  const ls = linhasRotulo(); if (!ls.length) return;
+  if (PR.estilo === 'tecnico') {
+    const a = ls[0].txt, b = (ls[1] && ls[1].txt) || PR.sub || '';
+    const s1 = M.fitSize(g, a, W * 0.82, (PR.tamanho || 44) * u, 500, UI, 22 * u), s2 = s1 * 0.52, q = clamp((t - 0.01) / 0.14);
+    g.save(); g.globalAlpha *= q; sombraSuave(0.55); g.fillStyle = PR.cor || '#F6C744'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    M.setFont(g, 500, s1, UI); g.letterSpacing = (-0.01 * s1).toFixed(1) + 'px'; g.fillText(a, W / 2, CY);
+    if (b) { M.setFont(g, 500, s2, UI); g.letterSpacing = '0px'; g.fillText('- ' + b.replace(/^-\s*|\s*-$/g, '') + ' -', W / 2, CY + s2 * 1.45); }
+    g.letterSpacing = '0px'; g.restore(); return;
+  }
+  const fam = (l) => (l.fonte === 'script' ? SCRIPT : l.fonte === 'serif' ? SERF : UI);
+  const wt = (l) => (l.fonte === 'script' || l.fonte === 'serif' ? 400 : l.peso || 500);
+  const base = (PR.tamanho || 96) * u;
+  const sz = ls.map((l) => { const alvo = base * (l.tam || (l.fonte === 'script' ? 1.3 : 1)); return Math.min(alvo, M.fitSize(g, l.txt, W * 0.8, alvo, wt(l), fam(l), 20 * u)); });
+  const lh = sz.map((x, i) => x * (ls[i].fonte === 'script' ? 0.92 : 1.1));
+  const tot = lh.reduce((a, b) => a + b, 0), k = tot > VAGA ? VAGA / tot : 1;
+  let y = CY - (tot * k) / 2;
+  ls.forEach((l, i) => {
+    const s = sz[i] * k; y += lh[i] * k;
+    const p = M.ease.outCubic(clamp((t - 0.04 - i * 0.14) / 0.42)); if (p <= 0) return;
+    g.save(); g.globalAlpha *= p; M.setFont(g, wt(l), s, fam(l)); g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    if (l.fonte === 'sans') g.letterSpacing = (-0.012 * s).toFixed(1) + 'px';
+    g.fillStyle = l.cor || PR.cor || CREME;
+    textoHalo(l.txt, W / 2, y - s * (l.fonte === 'script' ? 0.12 : 0.2) + (1 - p) * 16 * u, 1.1);
+    g.letterSpacing = '0px'; g.restore();
+  });
+};
+CUES.rotulo = () => (PR.som === false || PR.estilo === 'tecnico' ? [] : [{ t: 0.05, type: 'paper', gain: 0.3 }]);
+
+// DOC — card de documento/print como PROVA ou recurso (R1: a lista numerada que ela está ensinando). Papel branco, termo
+//   em negrito + texto, numerado; entra subindo com sombra e fica parado (é para ver que existe, não para ler tudo).
+//   params: { titulo?, itens: ["Curiosidade: X hábitos que…", {forte: "Autoridade:", texto: "…"}], numerado: true,
+//   largura: 0.66, tamanho: 30, x: 0.5 }   Conteúdo REAL do cliente — nunca inventar documento.
+PECAS.doc = (t) => {
+  const its = (PR.itens || []).map((x) => (typeof x === 'string' ? (x.includes(':') ? { forte: x.slice(0, x.indexOf(':') + 1), texto: x.slice(x.indexOf(':') + 1).trim() } : { forte: '', texto: x }) : x));
+  const cw = W * (PR.largura || 0.66), pad = 40 * u, fz = (PR.tamanho || 30) * u, lh = fz * 1.34, num = PR.numerado !== false, ind = num ? fz * 1.5 : 0;
+  const maxw = cw - 2 * pad - ind, rows = [];
+  its.forEach((it, i) => {
+    const toks = [...(it.forte ? it.forte.split(/\s+/).map((w) => ({ w, b: true })) : []), ...String(it.texto || '').split(/\s+/).filter(Boolean).map((w) => ({ w, b: false }))];
+    let line = [], lw = 0;
+    toks.forEach((tk) => {
+      M.setFont(g, tk.b ? 700 : 400, fz, UI); const ww = g.measureText(tk.w + ' ').width;
+      if (lw + ww > maxw && line.length) { rows.push({ i, toks: line, first: !rows.length || rows[rows.length - 1].i !== i }); line = []; lw = 0; }
+      line.push({ ...tk, x: lw }); lw += ww;
+    });
+    if (line.length) rows.push({ i, toks: line, first: !rows.length || rows[rows.length - 1].i !== i });
+  });
+  const titH = PR.titulo ? fz * 1.9 : 0, gaps = its.length > 1 ? (its.length - 1) * fz * 0.45 : 0;
+  const ch = pad * 2 + titH + rows.length * lh + gaps, k = ch > VAGA * 1.15 ? (VAGA * 1.15) / ch : 1;
+  const cx = W * (PR.x ?? 0.5), p = M.springZ(t - 0.02, 0.82, 2.2);
+  g.save(); g.globalAlpha *= clamp(p * 1.6); g.translate(cx, CY + (1 - p) * 60 * u); g.scale(k * (0.96 + 0.04 * p), k * (0.96 + 0.04 * p)); g.rotate(((PR.inclina || 0) * Math.PI) / 180);
+  const x0 = -cw / 2, y0 = -ch / 2;
+  g.shadowColor = 'rgba(0,0,0,.30)'; g.shadowBlur = 46 * u; g.shadowOffsetY = 16 * u; g.fillStyle = PR.papel || '#FFFFFF'; M.rrect(g, x0, y0, cw, ch, 10 * u); g.fill(); sombra(false);
+  let y = y0 + pad; g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.fillStyle = PR.tinta || '#1D1D1F';
+  if (PR.titulo) { M.setFont(g, 800, fz * 1.15, UI); g.fillText(PR.titulo, x0 + pad, y + fz * 1.15); y += titH; }
+  let ult = -1;
+  rows.forEach((r) => {
+    if (r.i !== ult && ult >= 0) y += fz * 0.45; ult = r.i; y += lh;
+    if (num && r.first) { M.setFont(g, 400, fz, UI); g.fillText(r.i + 1 + '.', x0 + pad, y - lh * 0.25); }
+    r.toks.forEach((tk) => { M.setFont(g, tk.b ? 700 : 400, fz, UI); g.fillText(tk.w, x0 + pad + ind + tk.x, y - lh * 0.25); });
+  });
+  g.restore();
+};
+CUES.doc = () => [{ t: 0.04, type: 'paper', gain: 0.45 }];
+
+// CARTELA — respiro da entrevista (R2): corta do rosto para uma tela LISA (cinza claro ou quase preto) e a fala continua
+//   ESCRITA, trecho a trecho (1–3 palavras), cada palavra entrando com fade quando é dita. modo "tela_cheia".
+//   params: { fundo: "claro"|"escuro"|"#hex", y: 0.5, tamanho: 52, palavras_por_trecho: 3, som?: false }
+function corCartela() {
+  const f = PR.fundo || 'claro', bg = f === 'claro' ? '#C9C8CB' : f === 'escuro' ? '#141416' : f;
+  const h = bg.replace('#', ''), lum = 0.299 * parseInt(h.slice(0, 2), 16) + 0.587 * parseInt(h.slice(2, 4), 16) + 0.114 * parseInt(h.slice(4, 6), 16);
+  return { bg, tx: PR.tinta || (lum > 140 ? '#161617' : '#F2F2F2') };
+}
+function trechosCartela() {
+  const pw = PR._palavras || (PC.texto || '').split(/\s+/).filter(Boolean).map((w, i) => ({ w, t: 0.08 + i * 0.32, e: 0.32 + i * 0.32 }));
+  const N = PR.palavras_por_trecho || 3, out = []; let cur = [];
+  pw.forEach((p, i) => {
+    cur.push(p); const nx = pw[i + 1];
+    const cont = cur.filter((x) => !FUNC_PT.has(limpaW(x.w))).length;
+    const quebra = !nx || /[.!?:;,]$/.test(p.w) || nx.t - p.e > 0.3 || cont >= N || cur.length >= N + 1;
+    if (quebra && !(nx && FUNC_PT.has(limpaW(p.w)))) { out.push(cur); cur = []; }
+  });
+  if (cur.length) out.push(cur);
+  return out.map((ws, k) => ({ ws, t0: k ? ws[0].t - 0.05 : 0, t1: out[k + 1] ? out[k + 1][0].t - 0.05 : DUR + 1 }));
+}
+PECAS.cartela = (t) => {
+  const tr = trechosCartela().find((x) => t >= x.t0 && t < x.t1); if (!tr) return;
+  const { tx } = corCartela(), fz = (PR.tamanho || 56) * u, y = H * (PR.y ?? 0.5);
+  M.setFont(g, 500, fz, UI); g.letterSpacing = (-0.03 * fz).toFixed(1) + 'px';
+  const txt = tr.ws.map((x) => x.w), wd = txt.map((w) => g.measureText(w).width), sp = g.measureText(' ').width * 0.9;
+  const tot = wd.reduce((a, b) => a + b, 0) + sp * (txt.length - 1), sc = tot > W * 0.84 ? (W * 0.84) / tot : 1;
+  let x = W / 2 - (tot * sc) / 2; g.textAlign = 'left'; g.textBaseline = 'middle';
+  txt.forEach((w, i) => {
+    const a = M.ease.outQuad(clamp((t - tr.ws[i].t + 0.06) / 0.2));
+    if (a > 0) { g.save(); g.globalAlpha *= a; g.fillStyle = tx; g.translate(x, y + (1 - a) * 6 * u); g.scale(sc, sc); g.fillText(w, 0, 0); g.restore(); }
+    x += (wd[i] + sp) * sc;
+  });
+  g.letterSpacing = '0px';
+};
+CUES.cartela = () => (PR.som === false ? [] : [{ t: Math.max(0, DUR - 0.03), type: 'whoosh', gain: 0.3 }]);
+
+// ════════════════════ composição ════════════════════
+function draw(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = 'none'; sombra(false);
+  g.clearRect(0, 0, W, H);
+  fundoOpaco(t);
+  const e = sair(t), dir = PC.posicao === 'topo' ? -1 : 1;
+  g.save(); g.globalAlpha = 1 - e;
+  const sc = life(t); g.translate(W / 2, CY + dir * e * 0.03 * H); g.scale(sc, sc); g.translate(-W / 2, -CY);
+  if (e > 0) g.filter = `blur(${(e * 6 * u).toFixed(2)}px)`;
+  (PECAS[PC.peca] || PECAS.texto)(t);
+  g.restore();
+  if (Q.has('debug')) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(12, 12, 460 * u, 50 * u); g.fillStyle = '#fff'; g.font = `600 ${24 * u}px monospace`; g.fillText(`${ID} ${PC.peca} f${Math.round(t * FPS)} ${t.toFixed(2)}s`, 24, 46 * u); }
+}
+window.seek = (t) => { draw(clamp(t, 0, DUR - 1e-4)); return true; };
+window.CUES = () => ((CUES[PC.peca] || CUES.texto)() || []).concat(PC.sfx_saida ? [{ t: DUR - EX, type: 'swish', gain: 0.3 }] : []);
+window.SHOTS = [{ from: 0, to: DUR, name: ID, out: 'cut' }];
+window.VALIDATE = () => {
+  const out = []; const tx = [PC.texto, ...(PR.linhas || []).map((x) => (typeof x === 'string' ? x : x && x.txt)), PR.palavra, PR.nome, PR.chave, ...(PR.textos || [])].filter((x) => typeof x === 'string' && x);
+  for (const x of tx) { const s = M.fitSize(g, x, SAFE_W, 200 * u, 900, DISP, 1); if (s < 52 * u) out.push(`"${x}" fica com ${Math.round(s)}px (< 5,2% do lado curto) — encurte o texto`); }
+  const need = 0.5 + 0.3 * (PC.texto || (PR.linhas || []).map((x) => (typeof x === 'string' ? x : x && x.txt) || '').join(' ') || '').split(/\s+/).filter(Boolean).length;
+  if (DUR < need) out.push(`${ID}: ${DUR.toFixed(1)}s no ar; o texto pede ${need.toFixed(1)}s para ser lido`);
+  if (/\b(fonte|source)\s*:/i.test(JSON.stringify(PC))) out.push(`${ID}: fonte na tela — proibido salvo pedido (regra Orbe)`);
+  return out;
+};
+window.ready = document.fonts.ready.then(() => Promise.all([`900 40px ${DISP}`, `800 40px ${DISP}`, `italic 700 40px ${DISP}`, `italic 800 40px ${DISP}`, `500 40px ${UI}`, `600 40px ${UI}`, `700 40px ${UI}`, `800 40px ${UI}`, `900 40px ${UI}`,
+  ...(DOSSIE ? [`italic 400 40px ${SERF}`, `400 40px ${SERF}`, `400 40px ${BAN}`, `700 40px ${MAO}`] : []), ...(['rotulo', 'empilha', 'doc'].includes(PC.peca) ? [`400 40px ${SCRIPT}`, `400 40px ${SERF}`, `400 40px ${UI}`] : [])].map((f) => document.fonts.load(f, 'aãçé0').catch(() => 0)))).then(carregaImgs);
+window.ready.then(() => window.seek(+Q.get('t') || Math.min(DUR * 0.6, 1.2)));
+</script>
+</body></html>
